@@ -134,3 +134,53 @@
   background: rgba(63, 122, 87, 0.1);
   color: var(--color-success);
 }
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 820px;
+  margin-bottom: 40px;
+}
+
+.metric-card {
+  min-height: 132px;
+  padding: 20px;
+
+  display: flex;
+  flex-direction: column;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  background: var(--color-surface);
+}
+
+.metric-card__label {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metric-card__value {
+  margin-top: 12px;
+
+  color: var(--color-forest);
+
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.metric-card__detail {
+  margin-top: auto;
+
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+}

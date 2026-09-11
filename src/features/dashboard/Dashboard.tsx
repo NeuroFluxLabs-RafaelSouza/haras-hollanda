@@ -21,10 +21,45 @@ const appointments = [
     completed: false,
   },
 ]
+const metrics = [
+  {
+    label: 'Cavalos ativos',
+    value: '23',
+    detail: 'Todos acompanhados',
+  },
+  {
+    label: 'Baias livres',
+    value: '4',
+    detail: 'de 23 baias',
+  },
+  {
+    label: 'Alertas',
+    value: '2',
+    detail: 'Precisam de atenção',
+  },
+]
 
 export function Dashboard() {
   return (
     <section className="dashboard">
+        <div className="dashboard-metrics">
+  {metrics.map((metric) => (
+    <article className="metric-card" key={metric.label}>
+      <span className="metric-card__label">
+        {metric.label}
+      </span>
+
+      <strong className="metric-card__value">
+        {metric.value}
+      </strong>
+
+      <span className="metric-card__detail">
+        {metric.detail}
+      </span>
+    </article>
+  ))}
+</div>
+
       <div className="dashboard-section">
         <div className="dashboard-section__header">
           <div>
