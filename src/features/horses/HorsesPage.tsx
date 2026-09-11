@@ -90,5 +90,4 @@ export function HorsesPage() {
     </div>
   </section>
 )
-
 }
