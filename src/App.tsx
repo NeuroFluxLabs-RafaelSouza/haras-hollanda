@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 
-
+import { NewHorsesPage } from './features/horses/NewHorsesPage.tsx'
 import { Sidebar } from './components/layout/Sidebar.tsx'
 import { Dashboard } from './features/dashboard/Dashboard.tsx'
 import { HorsesPage } from './features/horses/HorsesPage.tsx'
@@ -38,6 +38,7 @@ function App() {
           />
 
           <Route path="/cavalos" element={<HorsesPage />} />
+          <Route path="/cavalos/novo" element={<NewHorsesPage />} />
         </Routes>
       </main>
     </div>

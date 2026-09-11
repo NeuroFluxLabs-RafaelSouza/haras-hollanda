@@ -1,3 +1,6 @@
+import { Link } from 'react-router-dom'
+
+import { Plus, Search } from 'lucide-react'
 import './HorsesPage.css'
 
 
@@ -46,6 +49,32 @@ export function HorsesPage() {
         Acompanhe os cavalos hospedados, responsáveis, baias e alimentação.
       </p>
     </header>
+
+    <div className="horses-toolbar">
+  <span className="horses-toolbar__count">
+    {horses.length} cavalos cadastrados
+  </span>
+
+  <div className="horses-toolbar__actions">
+    <label className="horses-search">
+      <Search size={17} />
+
+      <input
+        type="search"
+        placeholder="Buscar cavalo..."
+      />
+    </label>
+
+    <Link
+  className="horses-add-button"
+  to="/cavalos/novo"
+    >
+     <Plus size={17} />
+    Novo cavalo
+    </Link>
+
+  </div>
+</div>
 
     <div className="horses-grid">
       {horses.map((horse) => (
