@@ -1,3 +1,5 @@
+import { NavLink } from 'react-router-dom'
+
 import {
   CalendarDays,
   CircleDollarSign,
@@ -10,17 +12,18 @@ import {
   UsersRound,
 } from 'lucide-react'
 
+
 import './Sidebar.css'
 
 const menuItems = [
-  { label: 'Início', icon: Home },
-  { label: 'Cavalos', icon: Stethoscope },
-  { label: 'Baias', icon: Grid2X2 },
-  { label: 'Agenda', icon: CalendarDays },
-  { label: 'Clientes', icon: UsersRound },
-  { label: 'Estoque', icon: Package },
-  { label: 'Financeiro', icon: CircleDollarSign },
-  { label: 'Configurações', icon: Settings },
+  { label: 'Início', icon: Home, path: '/' },
+  { label: 'Cavalos', icon: Stethoscope, path: '/cavalos' },
+  { label: 'Baias', icon: Grid2X2, path: '/baias' },
+  { label: 'Agenda', icon: CalendarDays, path: '/agenda' },
+  { label: 'Clientes', icon: UsersRound, path: '/clientes' },
+  { label: 'Estoque', icon: Package, path: '/estoque' },
+  { label: 'Financeiro', icon: CircleDollarSign, path: '/financeiro' },
+  { label: 'Configurações', icon: Settings, path: '/configuracoes' },
 ]
 
 export function Sidebar() {
@@ -36,18 +39,21 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar__nav">
-        {menuItems.map(({ label, icon: Icon }, index) => (
-          <button
-            key={label}
-            className={`sidebar__item ${
-              index === 0 ? 'sidebar__item--active' : ''
-            }`}
-            type="button"
-          >
-            <Icon size={18} strokeWidth={1.8} />
-            <span>{label}</span>
-          </button>
-        ))}
+        {menuItems.map(({ label, icon: Icon, path }) => (
+  <NavLink
+    key={label}
+    to={path}
+    end={path === '/'}
+    className={({ isActive }: { isActive: boolean }) =>
+  `sidebar__item ${
+    isActive ? 'sidebar__item--active' : ''
+  }`
+}
+  >
+    <Icon size={18} strokeWidth={1.8} />
+    <span>{label}</span>
+  </NavLink>
+))}
       </nav>
 
       <div className="sidebar__footer">
