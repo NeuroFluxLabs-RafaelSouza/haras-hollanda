@@ -39,6 +39,17 @@ const metrics = [
   },
 ]
 
+const alerts = [
+  {
+    title: 'Estoque de Ração Premium baixo',
+    detail: 'Restam aproximadamente 3 dias',
+  },
+  {
+    title: 'Vacina do Apache próxima',
+    detail: 'Agendada para amanhã',
+  },
+]
+
 export function Dashboard() {
   return (
     <section className="dashboard">
@@ -59,6 +70,31 @@ export function Dashboard() {
     </article>
   ))}
 </div>
+
+<div className="dashboard-alerts">
+  <div className="dashboard-alerts__header">
+    <div>
+      <span className="dashboard-section__eyebrow">Atenção</span>
+      <h2>Alertas</h2>
+    </div>
+
+    <span className="dashboard-alerts__count">
+      {alerts.length}
+    </span>
+  </div>
+
+  <div className="dashboard-alerts__list">
+    {alerts.map((alert) => (
+      <div className="dashboard-alert" key={alert.title}>
+        <div>
+          <strong>{alert.title}</strong>
+          <span>{alert.detail}</span>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
 
       <div className="dashboard-section">
         <div className="dashboard-section__header">
