@@ -2,11 +2,17 @@ import { Route, Routes } from 'react-router-dom'
 
 import { AppLayout } from './components/layout/AppLayout.tsx'
 
+import { AgendaPage } from './features/agenda/AgendaPage.tsx'
 import { LoginPage } from './features/auth/LoginPage.tsx'
 import { ProtectedRoute } from './features/auth/ProtectedRoute.tsx'
+import { ClientsPage } from './features/clients/ClientsPage.tsx'
 import { DashboardPage } from './features/dashboard/DashboardPage.tsx'
+import { FinancePage } from './features/finance/FinancePage.tsx'
 import { HorsesPage } from './features/horses/HorsesPage.tsx'
 import { NewHorsesPage } from './features/horses/NewHorsesPage.tsx'
+import { InventoryPage } from './features/inventory/InventoryPage.tsx'
+import { SettingsPage } from './features/settings/SettingsPage.tsx'
+import { StallsPage } from './features/stalls/StallsPage.tsx'
 
 import './App.css'
 
@@ -33,6 +39,36 @@ function App() {
           <Route
             path="/cavalos/novo"
             element={<NewHorsesPage />}
+          />
+
+          <Route
+            path="/baias"
+            element={<StallsPage />}
+          />
+
+          <Route
+            path="/agenda"
+            element={<AgendaPage />}
+          />
+
+          <Route
+            path="/clientes"
+            element={<ClientsPage />}
+          />
+
+          <Route
+            path="/estoque"
+            element={<InventoryPage />}
+          />
+
+          <Route
+            path="/financeiro"
+            element={<FinancePage />}
+          />
+
+          <Route
+            path="/configuracoes"
+            element={<SettingsPage />}
           />
         </Route>
       </Route>
