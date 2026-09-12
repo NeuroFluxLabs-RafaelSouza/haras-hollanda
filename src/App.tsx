@@ -13,6 +13,7 @@ import { HorsesPage } from './features/horses/HorsesPage.tsx'
 import { NewHorsesPage } from './features/horses/NewHorsesPage.tsx'
 import { InventoryPage } from './features/inventory/InventoryPage.tsx'
 import { SettingsPage } from './features/settings/SettingsPage.tsx'
+import { NewStallPage } from './features/stalls/NewStallPage.tsx'
 import { StallsPage } from './features/stalls/StallsPage.tsx'
 
 import './App.css'
@@ -45,6 +46,11 @@ function App() {
           <Route
             path="/baias"
             element={<StallsPage />}
+          />
+
+          <Route
+            path="/baias/nova"
+            element={<NewStallPage />}
           />
 
           <Route
