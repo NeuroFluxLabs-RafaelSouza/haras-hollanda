@@ -1,122 +1,330 @@
+import { useEffect, useMemo, useState } from 'react'
+import {
+  CircleDollarSign,
+  DoorOpen,
+  Plus,
+  Search,
+  UserRound,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { Plus, Search } from 'lucide-react'
+import type {
+  HorseListItem,
+} from './horsesService.ts'
+
+import {
+  getHorses,
+} from './horsesService.ts'
+
 import './HorsesPage.css'
 
+function formatMonthlyFee(value: number | null) {
+  if (value === null) {
+    return 'Não informada'
+  }
 
-const horses = [
-  {
-    name: 'Apache',
-    breed: 'Quarto de Milha',
-    sex: 'Macho',
-    client: 'Carlos Henrique',
-    stall: 'Baia 04',
-    feeding: '4 kg/dia',
-    feedingCost: 'R$ 16/dia',
-    status: 'Ativo',
-  },
-  {
-    name: 'Luna',
-    breed: 'Mangalarga',
-    sex: 'Fêmea',
-    client: 'Mariana Lopes',
-    stall: 'Baia 08',
-    feeding: '3 kg/dia',
-    feedingCost: 'R$ 12/dia',
-    status: 'Ativo',
-  },
-  {
-    name: 'Imperador',
-    breed: 'Campolina',
-    sex: 'Macho',
-    client: 'Ricardo Almeida',
-    stall: 'Baia 12',
-    feeding: '5 kg/dia',
-    feedingCost: 'R$ 20/dia',
-    status: 'Ativo',
-  },
-]
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value)
+}
+
+function getSexLabel(
+  sex: HorseListItem['sex'],
+) {
+  return sex === 'male'
+    ? 'Macho'
+    : 'Fêmea'
+}
+
+function normalizeText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
 
 export function HorsesPage() {
+  const [horses, setHorses] = useState<
+    HorseListItem[]
+  >([])
+
+  const [search, setSearch] = useState('')
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [error, setError] =
+    useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadHorses() {
+      try {
+        const data = await getHorses()
+
+        if (isMounted) {
+          setHorses(data)
+        }
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível carregar os cavalos.'
+
+        setError(message)
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadHorses()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const filteredHorses = useMemo(() => {
+    const normalizedSearch =
+      normalizeText(search)
+
+    if (!normalizedSearch) {
+      return horses
+    }
+
+    return horses.filter((horse) => {
+      const searchableContent = [
+        horse.name,
+        horse.breed ?? '',
+        horse.clientName,
+        horse.stallName ?? '',
+      ]
+
+      return searchableContent.some(
+        (value) =>
+          normalizeText(value).includes(
+            normalizedSearch,
+          ),
+      )
+    })
+  }, [horses, search])
+
+  const horseCountLabel =
+    horses.length === 1
+      ? '1 cavalo cadastrado'
+      : `${horses.length} cavalos cadastrados`
+
   return (
-  <section className="horses-page">
-    <header className="page-header">
-      <p className="page-header__eyebrow">Gestão de animais</p>
+    <section className="horses-page">
+      <header className="page-header">
+        <p className="page-header__eyebrow">
+          Gestão dos animais
+        </p>
 
-      <h1 className="page-header__title">Cavalos</h1>
+        <h1 className="page-header__title">
+          Cavalos
+        </h1>
 
-      <p className="page-header__description">
-        Acompanhe os cavalos hospedados, responsáveis, baias e alimentação.
-      </p>
-    </header>
+        <p className="page-header__description">
+          Consulte os animais, responsáveis, baias e mensalidades do haras.
+        </p>
+      </header>
 
-    <div className="horses-toolbar">
-  <span className="horses-toolbar__count">
-    {horses.length} cavalos cadastrados
-  </span>
+      <div className="horses-toolbar">
+        <span className="horses-toolbar__count">
+          {horseCountLabel}
+        </span>
 
-  <div className="horses-toolbar__actions">
-    <label className="horses-search">
-      <Search size={17} />
+        <div className="horses-toolbar__actions">
+          <div className="horses-search">
+            <Search
+              size={16}
+              strokeWidth={1.8}
+            />
 
-      <input
-        type="search"
-        placeholder="Buscar cavalo..."
-      />
-    </label>
-
-    <Link
-  className="horses-add-button"
-  to="/cavalos/novo"
-    >
-     <Plus size={17} />
-    Novo cavalo
-    </Link>
-
-  </div>
-</div>
-
-    <div className="horses-grid">
-      {horses.map((horse) => (
-        <article className="horse-card" key={horse.name}>
-          <div className="horse-card__top">
-            <div>
-              <h2 className="horse-card__name">
-                {horse.name}
-              </h2>
-
-              <p className="horse-card__meta">
-                {horse.breed} · {horse.sex}
-              </p>
-            </div>
-
-            <span className="horse-card__status">
-              {horse.status}
-            </span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value,
+                )
+              }
+              placeholder="Buscar cavalo..."
+              aria-label="Buscar cavalo"
+            />
           </div>
 
-          <div className="horse-card__details">
-            <div className="horse-card__detail">
-              <span>Cliente</span>
-              <strong>{horse.client}</strong>
-            </div>
+          <Link
+            className="horses-add-button"
+            to="/cavalos/novo"
+          >
+            <Plus size={17} />
+            Novo cavalo
+          </Link>
+        </div>
+      </div>
 
-            <div className="horse-card__detail">
-              <span>Baia</span>
-              <strong>{horse.stall}</strong>
-            </div>
-          </div>
+      {loading && (
+        <div className="horses-state">
+          Carregando cavalos...
+        </div>
+      )}
 
-          <div className="horse-card__feeding">
-            <span>Alimentação diária</span>
+      {error && (
+        <div className="horses-state horses-state--error">
+          {error}
+        </div>
+      )}
 
+      {!loading &&
+        !error &&
+        horses.length === 0 && (
+          <div className="horses-empty">
             <strong>
-              {horse.feeding} · {horse.feedingCost}
+              Nenhum cavalo cadastrado
             </strong>
+
+            <span>
+              Cadastre o primeiro cavalo para começar a organizar os animais
+              do haras.
+            </span>
+
+            <Link
+              className="horses-add-button"
+              to="/cavalos/novo"
+            >
+              <Plus size={17} />
+              Novo cavalo
+            </Link>
           </div>
-        </article>
-      ))}
-    </div>
-  </section>
-)
+        )}
+
+      {!loading &&
+        !error &&
+        horses.length > 0 &&
+        filteredHorses.length === 0 && (
+          <div className="horses-state">
+            Nenhum cavalo encontrado para “{search}”.
+          </div>
+        )}
+
+      {!loading &&
+        !error &&
+        filteredHorses.length > 0 && (
+          <div className="horses-grid">
+            {filteredHorses.map(
+              (horse) => (
+                <article
+                  className="horse-card"
+                  key={horse.id}
+                >
+                  <div className="horse-card__header">
+                    <div>
+                      <h2 className="horse-card__name">
+                        {horse.name}
+                      </h2>
+
+                      <span className="horse-card__breed">
+                        {horse.breed ??
+                          'Raça não informada'}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`horse-card__status ${
+                        horse.active
+                          ? 'horse-card__status--active'
+                          : 'horse-card__status--inactive'
+                      }`}
+                    >
+                      {horse.active
+                        ? 'Ativo'
+                        : 'Inativo'}
+                    </span>
+                  </div>
+
+                  <div className="horse-card__sex">
+                    {getSexLabel(
+                      horse.sex,
+                    )}
+                  </div>
+
+                  <div className="horse-card__details">
+                    <div className="horse-card__detail">
+                      <div className="horse-card__detail-icon">
+                        <UserRound
+                          size={17}
+                          strokeWidth={1.7}
+                        />
+                      </div>
+
+                      <div>
+                        <span>
+                          Responsável
+                        </span>
+
+                        <strong>
+                          {horse.clientName}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="horse-card__detail">
+                      <div className="horse-card__detail-icon">
+                        <DoorOpen
+                          size={17}
+                          strokeWidth={1.7}
+                        />
+                      </div>
+
+                      <div>
+                        <span>
+                          Baia
+                        </span>
+
+                        <strong>
+                          {horse.stallName ??
+                            'Sem baia'}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="horse-card__detail">
+                      <div className="horse-card__detail-icon">
+                        <CircleDollarSign
+                          size={17}
+                          strokeWidth={1.7}
+                        />
+                      </div>
+
+                      <div>
+                        <span>
+                          Mensalidade
+                        </span>
+
+                        <strong>
+                          {formatMonthlyFee(
+                            horse.monthlyFee,
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ),
+            )}
+          </div>
+        )}
+    </section>
+  )
 }

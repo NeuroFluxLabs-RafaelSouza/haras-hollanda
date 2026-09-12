@@ -10,7 +10,13 @@ import type {
 } from '../../domain/stall.ts'
 
 import {
+  getHorses,
+  type HorseListItem,
+} from '../horses/horsesService.ts'
+
+import {
   getStallMaintenanceAlerts,
+  getStalls,
 } from '../stalls/stallsService.ts'
 
 import './Dashboard.css'
@@ -36,41 +42,119 @@ const appointments = [
   },
 ]
 
-export function Dashboard() {
-  const [maintenanceAlerts, setMaintenanceAlerts] = useState<
-    StallMaintenanceAlert[]
-  >([])
+type DashboardStats = {
+  activeHorses: number
+  availableStalls: number
+  operationalStalls: number
+}
 
-  const [alertsLoading, setAlertsLoading] = useState(true)
-  const [alertsError, setAlertsError] = useState<string | null>(null)
+const initialStats: DashboardStats = {
+  activeHorses: 0,
+  availableStalls: 0,
+  operationalStalls: 0,
+}
+
+function getOccupiedStallIds(
+  horses: HorseListItem[],
+) {
+  return new Set(
+    horses
+      .filter(
+        (horse) =>
+          horse.active &&
+          horse.stallId !== null,
+      )
+      .map((horse) => horse.stallId as string),
+  )
+}
+
+export function Dashboard() {
+  const [stats, setStats] =
+    useState<DashboardStats>(initialStats)
+
+  const [
+    maintenanceAlerts,
+    setMaintenanceAlerts,
+  ] = useState<StallMaintenanceAlert[]>([])
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [error, setError] =
+    useState<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
 
-    async function loadMaintenanceAlerts() {
+    async function loadDashboard() {
       try {
-        const alerts = await getStallMaintenanceAlerts()
+        const [
+          horses,
+          stalls,
+          alerts,
+        ] = await Promise.all([
+          getHorses(),
+          getStalls(),
+          getStallMaintenanceAlerts(),
+        ])
 
-        if (isMounted) {
-          setMaintenanceAlerts(alerts)
+        if (!isMounted) {
+          return
         }
+
+        const activeHorses =
+          horses.filter(
+            (horse) => horse.active,
+          )
+
+        const occupiedStallIds =
+          getOccupiedStallIds(activeHorses)
+
+        const operationalStalls =
+          stalls.filter(
+            (stall) =>
+              stall.status === 'operational',
+          )
+
+        const availableStalls =
+          operationalStalls.filter(
+            (stall) =>
+              !occupiedStallIds.has(
+                stall.id,
+              ),
+          )
+
+        setStats({
+          activeHorses:
+            activeHorses.length,
+
+          availableStalls:
+            availableStalls.length,
+
+          operationalStalls:
+            operationalStalls.length,
+        })
+
+        setMaintenanceAlerts(alerts)
       } catch (error) {
-        if (isMounted) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : 'Não foi possível carregar os alertas.'
-
-          setAlertsError(message)
+        if (!isMounted) {
+          return
         }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível carregar o dashboard.'
+
+        setError(message)
       } finally {
         if (isMounted) {
-          setAlertsLoading(false)
+          setLoading(false)
         }
       }
     }
 
-    loadMaintenanceAlerts()
+    loadDashboard()
 
     return () => {
       isMounted = false
@@ -80,19 +164,43 @@ export function Dashboard() {
   const metrics = [
     {
       label: 'Cavalos ativos',
-      value: '23',
-      detail: 'Todos acompanhados',
+
+      value: loading
+        ? '...'
+        : String(
+            stats.activeHorses,
+          ),
+
+      detail:
+        stats.activeHorses === 1
+          ? '1 animal acompanhado'
+          : `${stats.activeHorses} animais acompanhados`,
     },
+
     {
       label: 'Baias livres',
-      value: '4',
-      detail: 'de 23 baias',
+
+      value: loading
+        ? '...'
+        : String(
+            stats.availableStalls,
+          ),
+
+      detail:
+        loading
+          ? 'Carregando...'
+          : `das ${stats.operationalStalls} operacionais`,
     },
+
     {
       label: 'Alertas',
-      value: alertsLoading
+
+      value: loading
         ? '...'
-        : String(maintenanceAlerts.length),
+        : String(
+            maintenanceAlerts.length,
+          ),
+
       detail:
         maintenanceAlerts.length === 1
           ? 'Precisa de atenção'
@@ -102,6 +210,25 @@ export function Dashboard() {
 
   return (
     <section className="dashboard">
+      {error && (
+        <div className="dashboard-alert dashboard-alert--danger">
+          <AlertTriangle
+            size={18}
+            strokeWidth={1.8}
+          />
+
+          <div>
+            <strong>
+              Não foi possível atualizar o painel
+            </strong>
+
+            <span>
+              {error}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="dashboard-metrics">
         {metrics.map((metric) => (
           <article
@@ -136,13 +263,13 @@ export function Dashboard() {
           </div>
 
           <span className="dashboard-alerts__count">
-            {alertsLoading
+            {loading
               ? '...'
               : maintenanceAlerts.length}
           </span>
         </div>
 
-        {alertsLoading && (
+        {loading && (
           <div className="dashboard-alert">
             <div>
               <strong>
@@ -152,27 +279,8 @@ export function Dashboard() {
           </div>
         )}
 
-        {alertsError && (
-          <div className="dashboard-alert dashboard-alert--danger">
-            <AlertTriangle
-              size={18}
-              strokeWidth={1.8}
-            />
-
-            <div>
-              <strong>
-                Não foi possível carregar os alertas
-              </strong>
-
-              <span>
-                {alertsError}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {!alertsLoading &&
-          !alertsError &&
+        {!loading &&
+          !error &&
           maintenanceAlerts.length === 0 && (
             <div className="dashboard-alert dashboard-alert--empty">
               <CheckCircle2
@@ -192,31 +300,32 @@ export function Dashboard() {
             </div>
           )}
 
-        {!alertsLoading &&
-          !alertsError &&
+        {!loading &&
           maintenanceAlerts.length > 0 && (
             <div className="dashboard-alerts__list">
-              {maintenanceAlerts.map((alert) => (
-                <div
-                  className={`dashboard-alert dashboard-alert--${alert.urgency}`}
-                  key={alert.stallId}
-                >
-                  <AlertTriangle
-                    size={18}
-                    strokeWidth={1.8}
-                  />
+              {maintenanceAlerts.map(
+                (alert) => (
+                  <div
+                    className={`dashboard-alert dashboard-alert--${alert.urgency}`}
+                    key={alert.stallId}
+                  >
+                    <AlertTriangle
+                      size={18}
+                      strokeWidth={1.8}
+                    />
 
-                  <div>
-                    <strong>
-                      {alert.message}
-                    </strong>
+                    <div>
+                      <strong>
+                        {alert.message}
+                      </strong>
 
-                    <span>
-                      {alert.detail}
-                    </span>
+                      <span>
+                        {alert.detail}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           )}
       </div>
@@ -242,52 +351,58 @@ export function Dashboard() {
         </div>
 
         <div className="appointments">
-          {appointments.map((appointment) => (
-            <div
-              className="appointment"
-              key={`${appointment.time}-${appointment.title}`}
-            >
+          {appointments.map(
+            (appointment) => (
               <div
-                className={`appointment__icon ${
-                  appointment.completed
-                    ? 'appointment__icon--completed'
-                    : ''
-                }`}
+                className="appointment"
+                key={`${appointment.time}-${appointment.title}`}
               >
-                {appointment.completed ? (
-                  <CheckCircle2 size={18} />
-                ) : (
-                  <Clock size={18} />
-                )}
-              </div>
+                <div
+                  className={`appointment__icon ${
+                    appointment.completed
+                      ? 'appointment__icon--completed'
+                      : ''
+                  }`}
+                >
+                  {appointment.completed ? (
+                    <CheckCircle2
+                      size={18}
+                    />
+                  ) : (
+                    <Clock
+                      size={18}
+                    />
+                  )}
+                </div>
 
-              <div className="appointment__time">
-                {appointment.time}
-              </div>
+                <div className="appointment__time">
+                  {appointment.time}
+                </div>
 
-              <div className="appointment__content">
-                <strong>
-                  {appointment.title}
-                </strong>
+                <div className="appointment__content">
+                  <strong>
+                    {appointment.title}
+                  </strong>
 
-                <span>
-                  {appointment.description}
+                  <span>
+                    {appointment.description}
+                  </span>
+                </div>
+
+                <span
+                  className={`appointment__status ${
+                    appointment.completed
+                      ? 'appointment__status--completed'
+                      : ''
+                  }`}
+                >
+                  {appointment.completed
+                    ? 'Concluído'
+                    : 'Pendente'}
                 </span>
               </div>
-
-              <span
-                className={`appointment__status ${
-                  appointment.completed
-                    ? 'appointment__status--completed'
-                    : ''
-                }`}
-              >
-                {appointment.completed
-                  ? 'Concluído'
-                  : 'Pendente'}
-              </span>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       </div>
     </section>
