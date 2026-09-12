@@ -1,22 +1,42 @@
 import type {
   CreateStallInput,
   Stall,
+  StallMaintenanceAlert,
+  StallStatus,
+  UpdateStallOperationalInput,
 } from '../../domain/stall.ts'
 
-import { supabase } from '../../lib/supabase'
+import {
+  createStallMaintenanceAlert,
+} from '../../domain/stall.ts'
+
+import { supabase } from '../../lib/supabase.ts'
 
 type StallRow = {
   id: string
   name: string
-  active: boolean
+  status: StallStatus
+  notes: string | null
+  maintenance_until: string | null
   created_at: string
 }
+
+const stallSelect = `
+  id,
+  name,
+  status,
+  notes,
+  maintenance_until,
+  created_at
+`
 
 function mapStall(row: StallRow): Stall {
   return {
     id: row.id,
     name: row.name,
-    active: row.active,
+    status: row.status,
+    notes: row.notes,
+    maintenanceUntil: row.maintenance_until,
     createdAt: row.created_at,
   }
 }
@@ -24,7 +44,7 @@ function mapStall(row: StallRow): Stall {
 export async function getStalls(): Promise<Stall[]> {
   const { data, error } = await supabase
     .from('stalls')
-    .select('id, name, active, created_at')
+    .select(stallSelect)
     .order('name', { ascending: true })
 
   if (error) {
@@ -36,6 +56,22 @@ export async function getStalls(): Promise<Stall[]> {
   )
 }
 
+export async function getStallById(
+  stallId: string,
+): Promise<Stall> {
+  const { data, error } = await supabase
+    .from('stalls')
+    .select(stallSelect)
+    .eq('id', stallId)
+    .single()
+
+  if (error) {
+    throw new Error(`Erro ao buscar baia: ${error.message}`)
+  }
+
+  return mapStall(data as StallRow)
+}
+
 export async function createStall(
   input: CreateStallInput,
 ): Promise<Stall> {
@@ -44,7 +80,7 @@ export async function createStall(
     .insert({
       name: input.name,
     })
-    .select('id, name, active, created_at')
+    .select(stallSelect)
     .single()
 
   if (error) {
@@ -52,4 +88,43 @@ export async function createStall(
   }
 
   return mapStall(data as StallRow)
+}
+
+export async function updateStallOperational(
+  stallId: string,
+  input: UpdateStallOperationalInput,
+): Promise<Stall> {
+  const { data, error } = await supabase
+    .from('stalls')
+    .update({
+      status: input.status,
+      notes: input.notes,
+      maintenance_until: input.maintenanceUntil,
+    })
+    .eq('id', stallId)
+    .select(stallSelect)
+    .single()
+
+  if (error) {
+    throw new Error(`Erro ao atualizar baia: ${error.message}`)
+  }
+
+  return mapStall(data as StallRow)
+}
+
+export async function getStallMaintenanceAlerts(): Promise<
+  StallMaintenanceAlert[]
+> {
+  const stalls = await getStalls()
+
+  return stalls
+    .map((stall) =>
+      createStallMaintenanceAlert(stall),
+    )
+    .filter(
+      (
+        alert,
+      ): alert is StallMaintenanceAlert =>
+        alert !== null,
+    )
 }

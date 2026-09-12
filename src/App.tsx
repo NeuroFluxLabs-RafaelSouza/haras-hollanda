@@ -13,6 +13,7 @@ import { HorsesPage } from './features/horses/HorsesPage.tsx'
 import { NewHorsesPage } from './features/horses/NewHorsesPage.tsx'
 import { InventoryPage } from './features/inventory/InventoryPage.tsx'
 import { SettingsPage } from './features/settings/SettingsPage.tsx'
+import { ManageStallPage } from './features/stalls/ManageStallPage.tsx'
 import { NewStallPage } from './features/stalls/NewStallPage.tsx'
 import { StallsPage } from './features/stalls/StallsPage.tsx'
 
@@ -51,6 +52,11 @@ function App() {
           <Route
             path="/baias/nova"
             element={<NewStallPage />}
+          />
+
+          <Route
+            path="/baias/:stallId/gerenciar"
+            element={<ManageStallPage />}
           />
 
           <Route

@@ -1,4 +1,17 @@
-import { CheckCircle2, Clock } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import {
+  CheckCircle2,
+  Clock,
+} from 'lucide-react'
+
+import type {
+  StallMaintenanceAlert,
+} from '../../domain/stall.ts'
+
+import {
+  getStallMaintenanceAlerts,
+} from '../stalls/stallsService.ts'
+
 import './Dashboard.css'
 
 const appointments = [
@@ -21,89 +34,193 @@ const appointments = [
     completed: false,
   },
 ]
-const metrics = [
-  {
-    label: 'Cavalos ativos',
-    value: '23',
-    detail: 'Todos acompanhados',
-  },
-  {
-    label: 'Baias livres',
-    value: '4',
-    detail: 'de 23 baias',
-  },
-  {
-    label: 'Alertas',
-    value: '2',
-    detail: 'Precisam de atenção',
-  },
-]
-
-const alerts = [
-  {
-    title: 'Estoque de Ração Premium baixo',
-    detail: 'Restam aproximadamente 3 dias',
-  },
-  {
-    title: 'Vacina do Apache próxima',
-    detail: 'Agendada para amanhã',
-  },
-]
 
 export function Dashboard() {
+  const [maintenanceAlerts, setMaintenanceAlerts] = useState<
+    StallMaintenanceAlert[]
+  >([])
+
+  const [alertsLoading, setAlertsLoading] = useState(true)
+  const [alertsError, setAlertsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadMaintenanceAlerts() {
+      try {
+        const alerts = await getStallMaintenanceAlerts()
+
+        if (isMounted) {
+          setMaintenanceAlerts(alerts)
+        }
+      } catch (error) {
+        if (isMounted) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível carregar os alertas.'
+
+          setAlertsError(message)
+        }
+      } finally {
+        if (isMounted) {
+          setAlertsLoading(false)
+        }
+      }
+    }
+
+    loadMaintenanceAlerts()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const metrics = [
+    {
+      label: 'Cavalos ativos',
+      value: '23',
+      detail: 'Todos acompanhados',
+    },
+    {
+      label: 'Baias livres',
+      value: '4',
+      detail: 'de 23 baias',
+    },
+    {
+      label: 'Alertas',
+      value: alertsLoading
+        ? '...'
+        : String(maintenanceAlerts.length),
+      detail:
+        maintenanceAlerts.length === 1
+          ? 'Precisa de atenção'
+          : 'Precisam de atenção',
+    },
+  ]
+
   return (
     <section className="dashboard">
-        <div className="dashboard-metrics">
-  {metrics.map((metric) => (
-    <article className="metric-card" key={metric.label}>
-      <span className="metric-card__label">
-        {metric.label}
-      </span>
+      <div className="dashboard-metrics">
+        {metrics.map((metric) => (
+          <article
+            className="metric-card"
+            key={metric.label}
+          >
+            <span className="metric-card__label">
+              {metric.label}
+            </span>
 
-      <strong className="metric-card__value">
-        {metric.value}
-      </strong>
+            <strong className="metric-card__value">
+              {metric.value}
+            </strong>
 
-      <span className="metric-card__detail">
-        {metric.detail}
-      </span>
-    </article>
-  ))}
-</div>
-
-<div className="dashboard-alerts">
-  <div className="dashboard-alerts__header">
-    <div>
-      <span className="dashboard-section__eyebrow">Atenção</span>
-      <h2>Alertas</h2>
-    </div>
-
-    <span className="dashboard-alerts__count">
-      {alerts.length}
-    </span>
-  </div>
-
-  <div className="dashboard-alerts__list">
-    {alerts.map((alert) => (
-      <div className="dashboard-alert" key={alert.title}>
-        <div>
-          <strong>{alert.title}</strong>
-          <span>{alert.detail}</span>
-        </div>
+            <span className="metric-card__detail">
+              {metric.detail}
+            </span>
+          </article>
+        ))}
       </div>
-    ))}
-  </div>
-</div>
 
+      <div className="dashboard-alerts">
+        <div className="dashboard-alerts__header">
+          <div>
+            <span className="dashboard-section__eyebrow">
+              Atenção
+            </span>
+
+            <h2>
+              Alertas
+            </h2>
+          </div>
+
+          <span className="dashboard-alerts__count">
+            {alertsLoading
+              ? '...'
+              : maintenanceAlerts.length}
+          </span>
+        </div>
+
+        {alertsLoading && (
+          <div className="dashboard-alert">
+            <div>
+              <strong>
+                Carregando alertas...
+              </strong>
+            </div>
+          </div>
+        )}
+
+        {alertsError && (
+          <div className="dashboard-alert">
+            <div>
+              <strong>
+                Não foi possível carregar os alertas
+              </strong>
+
+              <span>
+                {alertsError}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {!alertsLoading &&
+          !alertsError &&
+          maintenanceAlerts.length === 0 && (
+            <div className="dashboard-alert">
+              <div>
+                <strong>
+                  Nenhum alerta operacional
+                </strong>
+
+                <span>
+                  Não há manutenções vencidas ou próximas do vencimento.
+                </span>
+              </div>
+            </div>
+          )}
+
+        {!alertsLoading &&
+          !alertsError &&
+          maintenanceAlerts.length > 0 && (
+            <div className="dashboard-alerts__list">
+              {maintenanceAlerts.map((alert) => (
+                <div
+                  className="dashboard-alert"
+                  key={alert.stallId}
+                >
+                  <div>
+                    <strong>
+                      {alert.message}
+                    </strong>
+
+                    <span>
+                      {alert.detail}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+      </div>
 
       <div className="dashboard-section">
         <div className="dashboard-section__header">
           <div>
-            <span className="dashboard-section__eyebrow">Hoje</span>
-            <h2>Compromissos</h2>
+            <span className="dashboard-section__eyebrow">
+              Hoje
+            </span>
+
+            <h2>
+              Compromissos
+            </h2>
           </div>
 
-          <button type="button" className="dashboard-section__action">
+          <button
+            type="button"
+            className="dashboard-section__action"
+          >
             Ver agenda
           </button>
         </div>
@@ -133,8 +250,13 @@ export function Dashboard() {
               </div>
 
               <div className="appointment__content">
-                <strong>{appointment.title}</strong>
-                <span>{appointment.description}</span>
+                <strong>
+                  {appointment.title}
+                </strong>
+
+                <span>
+                  {appointment.description}
+                </span>
               </div>
 
               <span
@@ -144,7 +266,9 @@ export function Dashboard() {
                     : ''
                 }`}
               >
-                {appointment.completed ? 'Concluído' : 'Pendente'}
+                {appointment.completed
+                  ? 'Concluído'
+                  : 'Pendente'}
               </span>
             </div>
           ))}
