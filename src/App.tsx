@@ -6,6 +6,7 @@ import { AgendaPage } from './features/agenda/AgendaPage.tsx'
 import { LoginPage } from './features/auth/LoginPage.tsx'
 import { ProtectedRoute } from './features/auth/ProtectedRoute.tsx'
 import { ClientsPage } from './features/clients/ClientsPage.tsx'
+import { NewClientPage } from './features/clients/NewClientPage.tsx'
 import { DashboardPage } from './features/dashboard/DashboardPage.tsx'
 import { FinancePage } from './features/finance/FinancePage.tsx'
 import { HorsesPage } from './features/horses/HorsesPage.tsx'
@@ -54,6 +55,11 @@ function App() {
           <Route
             path="/clientes"
             element={<ClientsPage />}
+          />
+
+          <Route
+            path="/clientes/novo"
+            element={<NewClientPage />}
           />
 
           <Route

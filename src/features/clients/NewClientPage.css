@@ -1,0 +1,144 @@
+.new-client-page {
+  width: 100%;
+  max-width: 980px;
+}
+
+.new-client-form {
+  margin-top: 36px;
+  padding: 28px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.new-client-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.new-client-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.new-client-field--full {
+  grid-column: 1 / -1;
+}
+
+.new-client-field label {
+  color: var(--color-text);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.new-client-field input {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+
+  outline: none;
+
+  background: var(--color-surface);
+  color: var(--color-text);
+
+  font-size: 13px;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.new-client-field input:focus {
+  border-color: var(--color-moss);
+  box-shadow: 0 0 0 3px rgba(49, 83, 67, 0.08);
+}
+
+.new-client-form__error {
+  margin: 18px 0 0;
+
+  color: var(--color-danger);
+
+  font-size: 12px;
+}
+
+.new-client-form__actions {
+  margin-top: 28px;
+  padding-top: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+
+  border-top: 1px solid var(--color-border);
+}
+
+.new-client-cancel,
+.new-client-submit {
+  height: 42px;
+  padding: 0 16px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.new-client-cancel {
+  border: 1px solid var(--color-border);
+
+  color: var(--color-text-muted);
+}
+
+.new-client-submit {
+  border: 0;
+
+  background: var(--color-forest);
+  color: #ffffff;
+}
+
+.new-client-submit:hover {
+  background: var(--color-moss);
+}
+
+.new-client-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .new-client-form {
+    padding: 20px;
+  }
+
+  .new-client-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .new-client-field--full {
+    grid-column: auto;
+  }
+
+  .new-client-form__actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .new-client-cancel,
+  .new-client-submit {
+    width: 100%;
+  }
+}
