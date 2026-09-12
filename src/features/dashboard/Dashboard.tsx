@@ -1,13 +1,24 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useState,
+} from 'react'
+
 import {
   AlertTriangle,
   CheckCircle2,
   Clock,
 } from 'lucide-react'
 
+import { Link } from 'react-router-dom'
+
 import type {
   StallMaintenanceAlert,
 } from '../../domain/stall.ts'
+
+import {
+  getTodayAppointments,
+  type AppointmentListItem,
+} from '../agenda/appointmentsService.ts'
 
 import {
   getHorses,
@@ -20,27 +31,6 @@ import {
 } from '../stalls/stallsService.ts'
 
 import './Dashboard.css'
-
-const appointments = [
-  {
-    time: '07:00',
-    title: 'Alimentação da manhã',
-    description: '23 cavalos',
-    completed: true,
-  },
-  {
-    time: '10:30',
-    title: 'Ferrageamento',
-    description: 'Apache',
-    completed: false,
-  },
-  {
-    time: '17:00',
-    title: 'Alimentação da tarde',
-    description: '23 cavalos',
-    completed: false,
-  },
-]
 
 type DashboardStats = {
   activeHorses: number
@@ -64,24 +54,70 @@ function getOccupiedStallIds(
           horse.active &&
           horse.stallId !== null,
       )
-      .map((horse) => horse.stallId as string),
+      .map(
+        (horse) =>
+          horse.stallId as string,
+      ),
   )
 }
 
+function formatAppointmentTime(
+  scheduledAt: string,
+) {
+  return new Intl.DateTimeFormat(
+    'pt-BR',
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+    },
+  ).format(new Date(scheduledAt))
+}
+
+function getAppointmentDescription(
+  appointment: AppointmentListItem,
+) {
+  if (appointment.horseName) {
+    return appointment.horseName
+  }
+
+  if (appointment.description) {
+    return appointment.description
+  }
+
+  return 'Atividade geral do haras'
+}
+
 export function Dashboard() {
-  const [stats, setStats] =
-    useState<DashboardStats>(initialStats)
+  const [
+    stats,
+    setStats,
+  ] = useState<DashboardStats>(
+    initialStats,
+  )
 
   const [
     maintenanceAlerts,
     setMaintenanceAlerts,
-  ] = useState<StallMaintenanceAlert[]>([])
+  ] = useState<StallMaintenanceAlert[]>(
+    [],
+  )
 
-  const [loading, setLoading] =
-    useState(true)
+  const [
+    todayAppointments,
+    setTodayAppointments,
+  ] = useState<AppointmentListItem[]>(
+    [],
+  )
 
-  const [error, setError] =
-    useState<string | null>(null)
+  const [
+    loading,
+    setLoading,
+  ] = useState(true)
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -92,10 +128,12 @@ export function Dashboard() {
           horses,
           stalls,
           alerts,
+          appointments,
         ] = await Promise.all([
           getHorses(),
           getStalls(),
           getStallMaintenanceAlerts(),
+          getTodayAppointments(),
         ])
 
         if (!isMounted) {
@@ -104,16 +142,20 @@ export function Dashboard() {
 
         const activeHorses =
           horses.filter(
-            (horse) => horse.active,
+            (horse) =>
+              horse.active,
           )
 
         const occupiedStallIds =
-          getOccupiedStallIds(activeHorses)
+          getOccupiedStallIds(
+            activeHorses,
+          )
 
         const operationalStalls =
           stalls.filter(
             (stall) =>
-              stall.status === 'operational',
+              stall.status ===
+              'operational',
           )
 
         const availableStalls =
@@ -135,7 +177,13 @@ export function Dashboard() {
             operationalStalls.length,
         })
 
-        setMaintenanceAlerts(alerts)
+        setMaintenanceAlerts(
+          alerts,
+        )
+
+        setTodayAppointments(
+          appointments,
+        )
       } catch (error) {
         if (!isMounted) {
           return
@@ -230,24 +278,26 @@ export function Dashboard() {
       )}
 
       <div className="dashboard-metrics">
-        {metrics.map((metric) => (
-          <article
-            className="metric-card"
-            key={metric.label}
-          >
-            <span className="metric-card__label">
-              {metric.label}
-            </span>
+        {metrics.map(
+          (metric) => (
+            <article
+              className="metric-card"
+              key={metric.label}
+            >
+              <span className="metric-card__label">
+                {metric.label}
+              </span>
 
-            <strong className="metric-card__value">
-              {metric.value}
-            </strong>
+              <strong className="metric-card__value">
+                {metric.value}
+              </strong>
 
-            <span className="metric-card__detail">
-              {metric.detail}
-            </span>
-          </article>
-        ))}
+              <span className="metric-card__detail">
+                {metric.detail}
+              </span>
+            </article>
+          ),
+        )}
       </div>
 
       <div className="dashboard-alerts">
@@ -281,7 +331,8 @@ export function Dashboard() {
 
         {!loading &&
           !error &&
-          maintenanceAlerts.length === 0 && (
+          maintenanceAlerts.length ===
+            0 && (
             <div className="dashboard-alert dashboard-alert--empty">
               <CheckCircle2
                 size={18}
@@ -301,13 +352,16 @@ export function Dashboard() {
           )}
 
         {!loading &&
-          maintenanceAlerts.length > 0 && (
+          maintenanceAlerts.length >
+            0 && (
             <div className="dashboard-alerts__list">
               {maintenanceAlerts.map(
                 (alert) => (
                   <div
                     className={`dashboard-alert dashboard-alert--${alert.urgency}`}
-                    key={alert.stallId}
+                    key={
+                      alert.stallId
+                    }
                   >
                     <AlertTriangle
                       size={18}
@@ -316,11 +370,15 @@ export function Dashboard() {
 
                     <div>
                       <strong>
-                        {alert.message}
+                        {
+                          alert.message
+                        }
                       </strong>
 
                       <span>
-                        {alert.detail}
+                        {
+                          alert.detail
+                        }
                       </span>
                     </div>
                   </div>
@@ -342,68 +400,120 @@ export function Dashboard() {
             </h2>
           </div>
 
-          <button
-            type="button"
+          <Link
             className="dashboard-section__action"
+            to="/agenda"
           >
             Ver agenda
-          </button>
+          </Link>
         </div>
 
-        <div className="appointments">
-          {appointments.map(
-            (appointment) => (
-              <div
-                className="appointment"
-                key={`${appointment.time}-${appointment.title}`}
-              >
-                <div
-                  className={`appointment__icon ${
-                    appointment.completed
-                      ? 'appointment__icon--completed'
-                      : ''
-                  }`}
-                >
-                  {appointment.completed ? (
-                    <CheckCircle2
-                      size={18}
-                    />
-                  ) : (
-                    <Clock
-                      size={18}
-                    />
-                  )}
-                </div>
+        {loading && (
+          <div className="appointments">
+            <div className="appointment">
+              <div className="appointment__content">
+                <strong>
+                  Carregando compromissos...
+                </strong>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <div className="appointment__time">
-                  {appointment.time}
+        {!loading &&
+          todayAppointments.length ===
+            0 && (
+            <div className="appointments">
+              <div className="appointment">
+                <div className="appointment__icon appointment__icon--completed">
+                  <CheckCircle2
+                    size={18}
+                  />
                 </div>
 
                 <div className="appointment__content">
                   <strong>
-                    {appointment.title}
+                    Nenhum compromisso para hoje
                   </strong>
 
                   <span>
-                    {appointment.description}
+                    A agenda do dia está livre.
                   </span>
                 </div>
-
-                <span
-                  className={`appointment__status ${
-                    appointment.completed
-                      ? 'appointment__status--completed'
-                      : ''
-                  }`}
-                >
-                  {appointment.completed
-                    ? 'Concluído'
-                    : 'Pendente'}
-                </span>
               </div>
-            ),
+            </div>
           )}
-        </div>
+
+        {!loading &&
+          todayAppointments.length >
+            0 && (
+            <div className="appointments">
+              {todayAppointments.map(
+                (appointment) => (
+                  <div
+                    className="appointment"
+                    key={
+                      appointment.id
+                    }
+                  >
+                    <div
+                      className={`appointment__icon ${
+                        appointment.status ===
+                        'completed'
+                          ? 'appointment__icon--completed'
+                          : ''
+                      }`}
+                    >
+                      {appointment.status ===
+                      'completed' ? (
+                        <CheckCircle2
+                          size={18}
+                        />
+                      ) : (
+                        <Clock
+                          size={18}
+                        />
+                      )}
+                    </div>
+
+                    <div className="appointment__time">
+                      {formatAppointmentTime(
+                        appointment.scheduledAt,
+                      )}
+                    </div>
+
+                    <div className="appointment__content">
+                      <strong>
+                        {
+                          appointment.title
+                        }
+                      </strong>
+
+                      <span>
+                        {getAppointmentDescription(
+                          appointment,
+                        )}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`appointment__status ${
+                        appointment.status ===
+                        'completed'
+                          ? 'appointment__status--completed'
+                          : ''
+                      }`}
+                    >
+                      {appointment.status ===
+                      'completed'
+                        ? 'Concluído'
+                        : 'Pendente'}
+                    </span>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
       </div>
     </section>
   )

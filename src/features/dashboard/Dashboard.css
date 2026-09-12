@@ -297,6 +297,25 @@
   background: rgba(63, 122, 87, 0.1);
   color: var(--color-success);
 }
+/* Estado vazio / carregamento dos compromissos */
+
+.appointment:has(.appointment__content:last-child) {
+  grid-template-columns: 36px 1fr;
+}
+
+.appointment:has(.appointment__content:last-child)
+  .appointment__content {
+  grid-column: 2;
+}
+
+.appointment:has(.appointment__content:only-child) {
+  grid-template-columns: 1fr;
+}
+
+.appointment:has(.appointment__content:only-child)
+  .appointment__content {
+  grid-column: 1;
+}
 
 @media (max-width: 900px) {
   .dashboard-metrics {

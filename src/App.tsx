@@ -3,16 +3,25 @@ import { Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout.tsx'
 
 import { AgendaPage } from './features/agenda/AgendaPage.tsx'
+import { NewAppointmentPage } from './features/agenda/NewAppointmentPage.tsx'
+
 import { LoginPage } from './features/auth/LoginPage.tsx'
 import { ProtectedRoute } from './features/auth/ProtectedRoute.tsx'
+
 import { ClientsPage } from './features/clients/ClientsPage.tsx'
 import { NewClientPage } from './features/clients/NewClientPage.tsx'
+
 import { DashboardPage } from './features/dashboard/DashboardPage.tsx'
+
 import { FinancePage } from './features/finance/FinancePage.tsx'
+
 import { HorsesPage } from './features/horses/HorsesPage.tsx'
 import { NewHorsesPage } from './features/horses/NewHorsesPage.tsx'
+
 import { InventoryPage } from './features/inventory/InventoryPage.tsx'
+
 import { SettingsPage } from './features/settings/SettingsPage.tsx'
+
 import { ManageStallPage } from './features/stalls/ManageStallPage.tsx'
 import { NewStallPage } from './features/stalls/NewStallPage.tsx'
 import { StallsPage } from './features/stalls/StallsPage.tsx'
@@ -62,6 +71,11 @@ function App() {
           <Route
             path="/agenda"
             element={<AgendaPage />}
+          />
+
+          <Route
+            path="/agenda/novo"
+            element={<NewAppointmentPage />}
           />
 
           <Route
