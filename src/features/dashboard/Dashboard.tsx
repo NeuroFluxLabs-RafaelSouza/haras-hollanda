@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
 } from 'lucide-react'
@@ -152,7 +153,12 @@ export function Dashboard() {
         )}
 
         {alertsError && (
-          <div className="dashboard-alert">
+          <div className="dashboard-alert dashboard-alert--danger">
+            <AlertTriangle
+              size={18}
+              strokeWidth={1.8}
+            />
+
             <div>
               <strong>
                 Não foi possível carregar os alertas
@@ -168,7 +174,12 @@ export function Dashboard() {
         {!alertsLoading &&
           !alertsError &&
           maintenanceAlerts.length === 0 && (
-            <div className="dashboard-alert">
+            <div className="dashboard-alert dashboard-alert--empty">
+              <CheckCircle2
+                size={18}
+                strokeWidth={1.8}
+              />
+
               <div>
                 <strong>
                   Nenhum alerta operacional
@@ -187,9 +198,14 @@ export function Dashboard() {
             <div className="dashboard-alerts__list">
               {maintenanceAlerts.map((alert) => (
                 <div
-                  className="dashboard-alert"
+                  className={`dashboard-alert dashboard-alert--${alert.urgency}`}
                   key={alert.stallId}
                 >
+                  <AlertTriangle
+                    size={18}
+                    strokeWidth={1.8}
+                  />
+
                   <div>
                     <strong>
                       {alert.message}
