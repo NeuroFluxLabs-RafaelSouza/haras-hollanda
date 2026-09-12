@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Mail, Phone, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import type { Client } from '../../domain/client'
 import { getClients } from './clientsService'
+
+import './ClientsPage.css'
 
 export function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
@@ -41,8 +45,13 @@ export function ClientsPage() {
     }
   }, [])
 
+  const clientCountLabel =
+    clients.length === 1
+      ? '1 cliente cadastrado'
+      : `${clients.length} clientes cadastrados`
+
   return (
-    <section>
+    <section className="clients-page">
       <header className="page-header">
         <p className="page-header__eyebrow">
           Relacionamento
@@ -57,37 +66,97 @@ export function ClientsPage() {
         </p>
       </header>
 
+      <div className="clients-toolbar">
+        <span className="clients-toolbar__count">
+          {clientCountLabel}
+        </span>
+
+        <Link
+          className="clients-add-button"
+          to="/clientes/novo"
+        >
+          <Plus size={17} />
+          Novo cliente
+        </Link>
+      </div>
+
       {loading && (
-        <p>
+        <div className="clients-state">
           Carregando clientes...
-        </p>
+        </div>
       )}
 
       {error && (
-        <p>
+        <div className="clients-state clients-state--error">
           {error}
-        </p>
+        </div>
       )}
 
       {!loading && !error && clients.length === 0 && (
-        <p>
-          Nenhum cliente cadastrado.
-        </p>
+        <div className="clients-empty">
+          <strong>Nenhum cliente cadastrado</strong>
+
+          <span>
+            Cadastre o primeiro cliente para começar a vincular cavalos e
+            responsabilidades financeiras.
+          </span>
+
+          <Link
+            className="clients-add-button"
+            to="/clientes/novo"
+          >
+            <Plus size={17} />
+            Novo cliente
+          </Link>
+        </div>
       )}
 
       {!loading && !error && clients.length > 0 && (
-        <div>
+        <div className="clients-grid">
           {clients.map((client) => (
-            <article key={client.id}>
-              <h2>{client.name}</h2>
+            <article
+              className="client-card"
+              key={client.id}
+            >
+              <div className="client-card__header">
+                <div>
+                  <h2 className="client-card__name">
+                    {client.name}
+                  </h2>
 
-              <p>
-                {client.phone ?? 'Telefone não informado'}
-              </p>
+                  <span className="client-card__type">
+                    Responsável
+                  </span>
+                </div>
 
-              <p>
-                {client.email ?? 'E-mail não informado'}
-              </p>
+                <span
+                  className={
+                    client.active
+                      ? 'client-card__status'
+                      : 'client-card__status client-card__status--inactive'
+                  }
+                >
+                  {client.active ? 'Ativo' : 'Inativo'}
+                </span>
+              </div>
+
+              <div className="client-card__contacts">
+                <div className="client-card__contact">
+                  <Phone size={16} strokeWidth={1.8} />
+
+                  <span>
+                    {client.phone ?? 'Telefone não informado'}
+                  </span>
+                </div>
+
+                <div className="client-card__contact">
+                  <Mail size={16} strokeWidth={1.8} />
+
+                  <span>
+                    {client.email ?? 'E-mail não informado'}
+                  </span>
+                </div>
+              </div>
             </article>
           ))}
         </div>
