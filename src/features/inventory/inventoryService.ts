@@ -7,18 +7,32 @@ import {
   type InventoryItem,
   type InventoryItemSummary,
   type InventoryMovement,
+  type InventoryMovementSourceType,
   type InventoryMovementType,
   type InventoryUnit,
   type UpdateInventoryItemInput,
 } from '../../domain/inventory.ts'
 
-import { supabase } from '../../lib/supabase.ts'
+import {
+  supabase,
+} from '../../lib/supabase.ts'
 
 type InventoryItemRow = {
   id: string
   name: string
-  category: InventoryCategory
-  unit: InventoryUnit
+
+  category:
+    InventoryCategory
+
+  unit:
+    InventoryUnit
+
+  purchase_unit:
+    InventoryUnit | null
+
+  package_size:
+    number | null
+
   minimum_stock: number
   active: boolean
   created_at: string
@@ -27,11 +41,38 @@ type InventoryItemRow = {
 type InventoryMovementRow = {
   id: string
   item_id: string
-  movement_type: InventoryMovementType
+
+  movement_type:
+    InventoryMovementType
+
   quantity: number
-  unit_cost: number | null
-  notes: string | null
+
+  unit_cost:
+    number | null
+
+  notes:
+    string | null
+
   movement_at: string
+
+  source_type:
+    InventoryMovementSourceType
+
+  horse_id:
+    string | null
+
+  purchase_quantity:
+    number | null
+
+  purchase_unit:
+    InventoryUnit | null
+
+  package_size:
+    number | null
+
+  total_cost:
+    number | null
+
   created_at: string
 }
 
@@ -40,6 +81,8 @@ const inventoryItemSelect = `
   name,
   category,
   unit,
+  purchase_unit,
+  package_size,
   minimum_stock,
   active,
   created_at
@@ -53,6 +96,12 @@ const inventoryMovementSelect = `
   unit_cost,
   notes,
   movement_at,
+  source_type,
+  horse_id,
+  purchase_quantity,
+  purchase_unit,
+  package_size,
+  total_cost,
   created_at
 `
 
@@ -61,13 +110,35 @@ function mapInventoryItem(
 ): InventoryItem {
   return {
     id: row.id,
+
     name: row.name,
-    category: row.category,
-    unit: row.unit,
+
+    category:
+      row.category,
+
+    unit:
+      row.unit,
+
+    purchaseUnit:
+      row.purchase_unit,
+
+    packageSize:
+      row.package_size === null
+        ? null
+        : Number(
+            row.package_size,
+          ),
+
     minimumStock:
-      Number(row.minimum_stock),
-    active: row.active,
-    createdAt: row.created_at,
+      Number(
+        row.minimum_stock,
+      ),
+
+    active:
+      row.active,
+
+    createdAt:
+      row.created_at,
   }
 }
 
@@ -76,32 +147,82 @@ function mapInventoryMovement(
 ): InventoryMovement {
   return {
     id: row.id,
-    itemId: row.item_id,
+
+    itemId:
+      row.item_id,
+
     movementType:
       row.movement_type,
+
     quantity:
-      Number(row.quantity),
+      Number(
+        row.quantity,
+      ),
+
     unitCost:
       row.unit_cost === null
         ? null
-        : Number(row.unit_cost),
-    notes: row.notes,
+        : Number(
+            row.unit_cost,
+          ),
+
+    notes:
+      row.notes,
+
     movementAt:
       row.movement_at,
-    createdAt: row.created_at,
+
+    sourceType:
+      row.source_type,
+
+    horseId:
+      row.horse_id,
+
+    purchaseQuantity:
+      row.purchase_quantity ===
+      null
+        ? null
+        : Number(
+            row.purchase_quantity,
+          ),
+
+    purchaseUnit:
+      row.purchase_unit,
+
+    packageSize:
+      row.package_size === null
+        ? null
+        : Number(
+            row.package_size,
+          ),
+
+    totalCost:
+      row.total_cost === null
+        ? null
+        : Number(
+            row.total_cost,
+          ),
+
+    createdAt:
+      row.created_at,
   }
 }
 
 export async function getInventoryItems(): Promise<
   InventoryItem[]
 > {
-  const { data, error } =
-    await supabase
-      .from('inventory_items')
-      .select(inventoryItemSelect)
-      .order('name', {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_items')
+    .select(inventoryItemSelect)
+    .order(
+      'name',
+      {
         ascending: true,
-      })
+      },
+    )
 
   if (error) {
     throw new Error(
@@ -109,7 +230,9 @@ export async function getInventoryItems(): Promise<
     )
   }
 
-  return (data ?? []).map(
+  return (
+    data ?? []
+  ).map(
     (item) =>
       mapInventoryItem(
         item as InventoryItemRow,
@@ -120,14 +243,22 @@ export async function getInventoryItems(): Promise<
 export async function getActiveInventoryItems(): Promise<
   InventoryItem[]
 > {
-  const { data, error } =
-    await supabase
-      .from('inventory_items')
-      .select(inventoryItemSelect)
-      .eq('active', true)
-      .order('name', {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_items')
+    .select(inventoryItemSelect)
+    .eq(
+      'active',
+      true,
+    )
+    .order(
+      'name',
+      {
         ascending: true,
-      })
+      },
+    )
 
   if (error) {
     throw new Error(
@@ -135,7 +266,9 @@ export async function getActiveInventoryItems(): Promise<
     )
   }
 
-  return (data ?? []).map(
+  return (
+    data ?? []
+  ).map(
     (item) =>
       mapInventoryItem(
         item as InventoryItemRow,
@@ -146,12 +279,17 @@ export async function getActiveInventoryItems(): Promise<
 export async function getInventoryItemById(
   itemId: string,
 ): Promise<InventoryItem> {
-  const { data, error } =
-    await supabase
-      .from('inventory_items')
-      .select(inventoryItemSelect)
-      .eq('id', itemId)
-      .single()
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_items')
+    .select(inventoryItemSelect)
+    .eq(
+      'id',
+      itemId,
+    )
+    .single()
 
   if (error) {
     throw new Error(
@@ -167,18 +305,36 @@ export async function getInventoryItemById(
 export async function createInventoryItem(
   input: CreateInventoryItemInput,
 ): Promise<InventoryItem> {
-  const { data, error } =
-    await supabase
-      .from('inventory_items')
-      .insert({
-        name: input.name,
-        category: input.category,
-        unit: input.unit,
-        minimum_stock:
-          input.minimumStock,
-      })
-      .select(inventoryItemSelect)
-      .single()
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_items')
+    .insert({
+      name:
+        input.name,
+
+      category:
+        input.category,
+
+      unit:
+        input.unit,
+
+      purchase_unit:
+        input.purchaseUnit ??
+        null,
+
+      package_size:
+        input.packageSize ??
+        null,
+
+      minimum_stock:
+        input.minimumStock,
+    })
+    .select(
+      inventoryItemSelect,
+    )
+    .single()
 
   if (error) {
     throw new Error(
@@ -195,20 +351,43 @@ export async function updateInventoryItem(
   itemId: string,
   input: UpdateInventoryItemInput,
 ): Promise<InventoryItem> {
-  const { data, error } =
-    await supabase
-      .from('inventory_items')
-      .update({
-        name: input.name,
-        category: input.category,
-        unit: input.unit,
-        minimum_stock:
-          input.minimumStock,
-        active: input.active,
-      })
-      .eq('id', itemId)
-      .select(inventoryItemSelect)
-      .single()
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_items')
+    .update({
+      name:
+        input.name,
+
+      category:
+        input.category,
+
+      unit:
+        input.unit,
+
+      purchase_unit:
+        input.purchaseUnit ??
+        null,
+
+      package_size:
+        input.packageSize ??
+        null,
+
+      minimum_stock:
+        input.minimumStock,
+
+      active:
+        input.active,
+    })
+    .eq(
+      'id',
+      itemId,
+    )
+    .select(
+      inventoryItemSelect,
+    )
+    .single()
 
   if (error) {
     throw new Error(
@@ -224,13 +403,20 @@ export async function updateInventoryItem(
 export async function getInventoryMovements(): Promise<
   InventoryMovement[]
 > {
-  const { data, error } =
-    await supabase
-      .from('inventory_movements')
-      .select(inventoryMovementSelect)
-      .order('movement_at', {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_movements')
+    .select(
+      inventoryMovementSelect,
+    )
+    .order(
+      'movement_at',
+      {
         ascending: false,
-      })
+      },
+    )
 
   if (error) {
     throw new Error(
@@ -238,7 +424,9 @@ export async function getInventoryMovements(): Promise<
     )
   }
 
-  return (data ?? []).map(
+  return (
+    data ?? []
+  ).map(
     (movement) =>
       mapInventoryMovement(
         movement as InventoryMovementRow,
@@ -249,14 +437,24 @@ export async function getInventoryMovements(): Promise<
 export async function getInventoryMovementsByItemId(
   itemId: string,
 ): Promise<InventoryMovement[]> {
-  const { data, error } =
-    await supabase
-      .from('inventory_movements')
-      .select(inventoryMovementSelect)
-      .eq('item_id', itemId)
-      .order('movement_at', {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_movements')
+    .select(
+      inventoryMovementSelect,
+    )
+    .eq(
+      'item_id',
+      itemId,
+    )
+    .order(
+      'movement_at',
+      {
         ascending: false,
-      })
+      },
+    )
 
   if (error) {
     throw new Error(
@@ -264,7 +462,9 @@ export async function getInventoryMovementsByItemId(
     )
   }
 
-  return (data ?? []).map(
+  return (
+    data ?? []
+  ).map(
     (movement) =>
       mapInventoryMovement(
         movement as InventoryMovementRow,
@@ -288,7 +488,9 @@ export async function getInventoryCurrentStock(
 export async function createInventoryMovement(
   input: CreateInventoryMovementInput,
 ): Promise<InventoryMovement> {
-  if (input.quantity <= 0) {
+  if (
+    input.quantity <= 0
+  ) {
     throw new Error(
       'A quantidade da movimentação deve ser maior que zero.',
     )
@@ -313,31 +515,61 @@ export async function createInventoryMovement(
     }
   }
 
-  const { data, error } =
-    await supabase
-      .from('inventory_movements')
-      .insert({
-        item_id: input.itemId,
+  const sourceType =
+    input.sourceType ??
+    'manual'
 
-        movement_type:
-          input.movementType,
+  const {
+    data,
+    error,
+  } = await supabase
+    .from('inventory_movements')
+    .insert({
+      item_id:
+        input.itemId,
 
-        quantity:
-          input.quantity,
+      movement_type:
+        input.movementType,
 
-        unit_cost:
-          input.unitCost,
+      quantity:
+        input.quantity,
 
-        notes:
-          input.notes,
+      unit_cost:
+        input.unitCost,
 
-        movement_at:
-          input.movementAt,
-      })
-      .select(
-        inventoryMovementSelect,
-      )
-      .single()
+      notes:
+        input.notes,
+
+      movement_at:
+        input.movementAt,
+
+      source_type:
+        sourceType,
+
+      horse_id:
+        input.horseId ??
+        null,
+
+      purchase_quantity:
+        input.purchaseQuantity ??
+        null,
+
+      purchase_unit:
+        input.purchaseUnit ??
+        null,
+
+      package_size:
+        input.packageSize ??
+        null,
+
+      total_cost:
+        input.totalCost ??
+        null,
+    })
+    .select(
+      inventoryMovementSelect,
+    )
+    .single()
 
   if (error) {
     throw new Error(

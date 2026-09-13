@@ -12,7 +12,9 @@ import {
   UserRound,
 } from 'lucide-react'
 
-import { Link } from 'react-router-dom'
+import {
+  Link,
+} from 'react-router-dom'
 
 import type {
   Professional,
@@ -24,10 +26,15 @@ import {
 
 import './ProfessionalsPage.css'
 
-function normalizeText(value: string) {
+function normalizeText(
+  value: string,
+) {
   return value
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
     .toLowerCase()
     .trim()
 }
@@ -36,7 +43,9 @@ export function ProfessionalsPage() {
   const [
     professionals,
     setProfessionals,
-  ] = useState<Professional[]>([])
+  ] = useState<Professional[]>(
+    [],
+  )
 
   const [
     search,
@@ -51,7 +60,9 @@ export function ProfessionalsPage() {
   const [
     error,
     setError,
-  ] = useState<string | null>(null)
+  ] = useState<string | null>(
+    null,
+  )
 
   useEffect(() => {
     let isMounted = true
@@ -108,13 +119,18 @@ export function ProfessionalsPage() {
 
           return searchableContent.some(
             (value) =>
-              normalizeText(value).includes(
+              normalizeText(
+                value,
+              ).includes(
                 normalizedSearch,
               ),
           )
         },
       )
-    }, [professionals, search])
+    }, [
+      professionals,
+      search,
+    ])
 
   const professionalCountLabel =
     professionals.length === 1
@@ -129,7 +145,7 @@ export function ProfessionalsPage() {
           to="/agenda"
         >
           <ArrowLeft size={17} />
-          Agenda
+          Voltar à agenda
         </Link>
 
         <div>

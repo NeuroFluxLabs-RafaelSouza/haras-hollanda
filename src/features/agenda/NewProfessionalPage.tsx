@@ -69,7 +69,9 @@ export function NewProfessionalPage() {
   const [
     error,
     setError,
-  ] = useState<string | null>(null)
+  ] = useState<string | null>(
+    null,
+  )
 
   async function handleSubmit(
     event: SubmitEvent<HTMLFormElement>,
@@ -93,13 +95,16 @@ export function NewProfessionalPage() {
 
     try {
       await createProfessional({
-        name: trimmedName,
+        name:
+          trimmedName,
 
         specialty:
-          specialty.trim() || null,
+          specialty.trim() ||
+          null,
 
         phone:
-          phone.trim() || null,
+          phone.trim() ||
+          null,
       })
 
       navigate(
@@ -122,10 +127,10 @@ export function NewProfessionalPage() {
       <header className="new-professional-header">
         <Link
           className="new-professional-header__back"
-          to="/agenda/profissionais"
+          to="/agenda"
         >
           <ArrowLeft size={17} />
-          Profissionais
+          Voltar à agenda
         </Link>
 
         <div>

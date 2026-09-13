@@ -10,7 +10,7 @@ import {
   ArrowDown,
   ArrowUp,
   Boxes,
-  Plus,
+  PackageSearch,
   Search,
 } from 'lucide-react'
 
@@ -22,6 +22,7 @@ import {
   INVENTORY_CATEGORY_LABELS,
   INVENTORY_UNIT_LABELS,
   type InventoryItemSummary,
+  type InventoryUnit,
 } from '../../domain/inventory.ts'
 
 import {
@@ -49,16 +50,25 @@ function formatQuantity(
   return new Intl.NumberFormat(
     'pt-BR',
     {
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 3,
     },
   ).format(value)
 }
 
+const PLURAL_UNIT_LABELS: Record<
+  InventoryUnit,
+  string
+> = {
+  kg: 'Kg',
+  bag: 'Sacos',
+  bale: 'Fardos',
+  liter: 'Litros',
+  unit: 'Unidades',
+  box: 'Caixas',
+}
+
 function getUnitLabel(
-  unit:
-    InventoryItemSummary[
-      'item'
-    ]['unit'],
+  unit: InventoryUnit,
   quantity: number,
 ) {
   if (quantity === 1) {
@@ -67,16 +77,7 @@ function getUnitLabel(
     ]
   }
 
-  const pluralLabels = {
-    kg: 'Kg',
-    bag: 'Sacos',
-    bale: 'Fardos',
-    liter: 'Litros',
-    unit: 'Unidades',
-    box: 'Caixas',
-  }
-
-  return pluralLabels[
+  return PLURAL_UNIT_LABELS[
     unit
   ]
 }
@@ -198,19 +199,39 @@ export function InventoryPage() {
 
   return (
     <section className="inventory-page">
-      <header className="page-header">
-        <p className="page-header__eyebrow">
-          Controle operacional
-        </p>
+      <header className="inventory-page-header">
+        <div>
+          <p className="page-header__eyebrow">
+            Controle operacional
+          </p>
 
-        <h1 className="page-header__title">
-          Estoque
-        </h1>
+          <h1 className="page-header__title">
+            Estoque
+          </h1>
 
-        <p className="page-header__description">
-          Acompanhe insumos, quantidades disponíveis e níveis mínimos do
-          haras.
-        </p>
+          <p className="page-header__description">
+            Acompanhe os produtos disponíveis e registre movimentações sem
+            repetir cadastros.
+          </p>
+        </div>
+
+        <div className="inventory-page-header__actions">
+          <Link
+            className="inventory-page-header__secondary"
+            to="/estoque/produtos"
+          >
+            <PackageSearch size={17} />
+            Produtos
+          </Link>
+
+          <Link
+            className="inventory-page-header__primary"
+            to="/estoque/compra"
+          >
+            <ArrowDown size={17} />
+            Registrar compra
+          </Link>
+        </div>
       </header>
 
       <div className="inventory-metrics">
@@ -272,18 +293,10 @@ export function InventoryPage() {
                 event.target.value,
               )
             }
-            placeholder="Buscar item..."
+            placeholder="Buscar no estoque..."
             aria-label="Buscar item do estoque"
           />
         </div>
-
-        <Link
-          className="inventory-add-button"
-          to="/estoque/novo"
-        >
-          <Plus size={17} />
-          Novo item
-        </Link>
       </div>
 
       {error && (
@@ -308,12 +321,18 @@ export function InventoryPage() {
             />
 
             <strong>
-              Nenhum item cadastrado
+              Nenhum produto no estoque
             </strong>
 
             <span>
-              Cadastre o primeiro item para começar a controlar o estoque.
+              Cadastre um produto e depois registre a primeira compra.
             </span>
+
+            <Link
+              to="/estoque/produtos/novo"
+            >
+              Cadastrar produto
+            </Link>
           </div>
         )}
 
@@ -322,7 +341,7 @@ export function InventoryPage() {
         activeItems.length > 0 &&
         filteredItems.length === 0 && (
           <div className="inventory-state">
-            Nenhum item encontrado para “{search}”.
+            Nenhum produto encontrado para “{search}”.
           </div>
         )}
 
@@ -406,6 +425,39 @@ export function InventoryPage() {
                     </div>
                   </div>
 
+                  {item.purchaseUnit &&
+                    item.packageSize && (
+                    <div className="inventory-card__package">
+                      <Boxes
+                        size={15}
+                        strokeWidth={1.8}
+                      />
+
+                      <span>
+                        Compra em{' '}
+                        {getUnitLabel(
+                          item.purchaseUnit,
+                          2,
+                        )}
+                        {' · '}
+                        {formatQuantity(
+                          item.packageSize,
+                        )}{' '}
+                        {
+                          INVENTORY_UNIT_LABELS[
+                            item.unit
+                          ]
+                        }{' '}
+                        por{' '}
+                        {
+                          INVENTORY_UNIT_LABELS[
+                            item.purchaseUnit
+                          ]
+                        }
+                      </span>
+                    </div>
+                  )}
+
                   {isBelowMinimum && (
                     <div className="inventory-card__alert">
                       <AlertTriangle
@@ -422,22 +474,18 @@ export function InventoryPage() {
                   <div className="inventory-card__actions">
                     <Link
                       className="inventory-card__movement inventory-card__movement--entry"
-                      to={`/estoque/${item.id}/movimentar?type=entry`}
+                      to={`/estoque/compra?product=${item.id}`}
                     >
-                      <ArrowDown
-                        size={15}
-                      />
-                      Registrar entrada
+                      <ArrowDown size={15} />
+                      Registrar compra
                     </Link>
 
                     <Link
                       className="inventory-card__movement inventory-card__movement--exit"
                       to={`/estoque/${item.id}/movimentar?type=exit`}
                     >
-                      <ArrowUp
-                        size={15}
-                      />
-                      Registrar saída
+                      <ArrowUp size={15} />
+                      Saída manual
                     </Link>
                   </div>
                 </article>

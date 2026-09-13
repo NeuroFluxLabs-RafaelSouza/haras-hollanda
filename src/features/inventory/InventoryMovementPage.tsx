@@ -24,9 +24,12 @@ import {
 } from '../../components/ui/MoneyInput.tsx'
 
 import {
+  calculatePurchaseStockQuantity,
+  calculatePurchaseTotal,
   INVENTORY_UNIT_LABELS,
   type InventoryItem,
   type InventoryMovementType,
+  type InventoryUnit,
 } from '../../domain/inventory.ts'
 
 import {
@@ -89,7 +92,7 @@ function formatQuantity(
     'pt-BR',
     {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 3,
     },
   ).format(value)
 }
@@ -106,27 +109,30 @@ function formatCurrency(
   ).format(value)
 }
 
+const PLURAL_UNIT_LABELS: Record<
+  InventoryUnit,
+  string
+> = {
+  kg: 'Kg',
+  bag: 'Sacos',
+  bale: 'Fardos',
+  liter: 'Litros',
+  unit: 'Unidades',
+  box: 'Caixas',
+}
+
 function getUnitLabel(
-  item: InventoryItem,
+  unit: InventoryUnit,
   quantity: number,
 ) {
   if (quantity === 1) {
     return INVENTORY_UNIT_LABELS[
-      item.unit
+      unit
     ]
   }
 
-  const pluralLabels = {
-    kg: 'Kg',
-    bag: 'Sacos',
-    bale: 'Fardos',
-    liter: 'Litros',
-    unit: 'Unidades',
-    box: 'Caixas',
-  }
-
-  return pluralLabels[
-    item.unit
+  return PLURAL_UNIT_LABELS[
+    unit
   ]
 }
 
@@ -283,6 +289,27 @@ export function InventoryMovementPage() {
     }
   }, [itemId])
 
+  const purchaseUnit:
+    InventoryUnit =
+      item?.purchaseUnit ??
+      item?.unit ??
+      'unit'
+
+  const packageSize =
+    item?.packageSize ??
+    1
+
+  const usesPackageConversion =
+    Boolean(
+      item?.purchaseUnit &&
+        item?.packageSize &&
+        (
+          item.purchaseUnit !==
+            item.unit ||
+          item.packageSize !== 1
+        ),
+    )
+
   const parsedQuantity =
     useMemo(
       () =>
@@ -292,19 +319,41 @@ export function InventoryMovementPage() {
       [quantity],
     )
 
+  const stockMovementQuantity =
+    useMemo(() => {
+      if (
+        movementType === 'exit'
+      ) {
+        return parsedQuantity
+      }
+
+      return calculatePurchaseStockQuantity(
+        parsedQuantity,
+        packageSize,
+      )
+    }, [
+      movementType,
+      parsedQuantity,
+      packageSize,
+    ])
+
   const totalValue =
-    useMemo(
-      () =>
-        movementType === 'entry'
-          ? parsedQuantity *
-            unitCost
-          : 0,
-      [
-        movementType,
+    useMemo(() => {
+      if (
+        movementType !== 'entry'
+      ) {
+        return 0
+      }
+
+      return calculatePurchaseTotal(
         parsedQuantity,
         unitCost,
-      ],
-    )
+      )
+    }, [
+      movementType,
+      parsedQuantity,
+      unitCost,
+    ])
 
   const projectedStock =
     useMemo(() => {
@@ -313,18 +362,18 @@ export function InventoryMovementPage() {
       ) {
         return (
           currentStock +
-          parsedQuantity
+          stockMovementQuantity
         )
       }
 
       return (
         currentStock -
-        parsedQuantity
+        stockMovementQuantity
       )
     }, [
       currentStock,
       movementType,
-      parsedQuantity,
+      stockMovementQuantity,
     ])
 
   async function handleSubmit(
@@ -352,16 +401,15 @@ export function InventoryMovementPage() {
     }
 
     if (
-      movementType ===
-        'exit' &&
-      parsedQuantity >
+      movementType === 'exit' &&
+      stockMovementQuantity >
         currentStock
     ) {
       setError(
         `Estoque insuficiente. Disponível: ${formatQuantity(
           currentStock,
         )} ${getUnitLabel(
-          item,
+          item.unit,
           currentStock,
         )}.`,
       )
@@ -401,11 +449,10 @@ export function InventoryMovementPage() {
         movementType,
 
         quantity:
-          parsedQuantity,
+          stockMovementQuantity,
 
         unitCost:
-          movementType ===
-            'entry' &&
+          movementType === 'entry' &&
           unitCost > 0
             ? unitCost
             : null,
@@ -416,6 +463,34 @@ export function InventoryMovementPage() {
 
         movementAt:
           movementDate.toISOString(),
+
+        sourceType:
+          movementType === 'entry'
+            ? 'purchase'
+            : 'manual',
+
+        horseId:
+          null,
+
+        purchaseQuantity:
+          movementType === 'entry'
+            ? parsedQuantity
+            : null,
+
+        purchaseUnit:
+          movementType === 'entry'
+            ? purchaseUnit
+            : null,
+
+        packageSize:
+          movementType === 'entry'
+            ? packageSize
+            : null,
+
+        totalCost:
+          movementType === 'entry'
+            ? totalValue
+            : null,
       })
 
       navigate('/estoque')
@@ -469,8 +544,8 @@ export function InventoryMovementPage() {
           </h1>
 
           <p className="page-header__description">
-            Registre entradas e saídas para manter o saldo do estoque
-            atualizado.
+            Registre compras e saídas excepcionais sem precisar calcular a
+            conversão do estoque manualmente.
           </p>
         </div>
       </header>
@@ -493,7 +568,7 @@ export function InventoryMovementPage() {
               currentStock,
             )}{' '}
             {getUnitLabel(
-              item,
+              item.unit,
               currentStock,
             )}
           </strong>
@@ -511,7 +586,8 @@ export function InventoryMovementPage() {
             </h2>
 
             <p>
-              Informe o tipo e os dados da movimentação.
+              Compras entram na unidade comercial e o sistema converte para a
+              unidade real do estoque.
             </p>
           </div>
         </div>
@@ -532,7 +608,7 @@ export function InventoryMovementPage() {
             }
           >
             <ArrowDown size={17} />
-            Entrada
+            Registrar compra
           </button>
 
           <button
@@ -550,14 +626,16 @@ export function InventoryMovementPage() {
             }
           >
             <ArrowUp size={17} />
-            Saída
+            Saída manual
           </button>
         </div>
 
         <div className="inventory-movement-form__grid">
           <div className="inventory-movement-field">
             <label htmlFor="quantity">
-              Quantidade
+              {movementType === 'entry'
+                ? 'Quantidade comprada'
+                : 'Quantidade de saída'}
             </label>
 
             <input
@@ -571,18 +649,55 @@ export function InventoryMovementPage() {
                   event.target.value,
                 )
               }
-              placeholder="Ex: 20"
+              placeholder={
+                movementType === 'entry'
+                  ? 'Ex: 10'
+                  : 'Ex: 2'
+              }
               autoComplete="off"
             />
 
-            <span className="inventory-movement-field__help">
-              Unidade:{' '}
-              {
-                INVENTORY_UNIT_LABELS[
-                  item.unit
-                ]
-              }
-            </span>
+            {movementType ===
+              'entry' ? (
+              <>
+                <span className="inventory-movement-field__help">
+                  Unidade de compra:{' '}
+                  {getUnitLabel(
+                    purchaseUnit,
+                    parsedQuantity,
+                  )}
+                </span>
+
+                {usesPackageConversion && (
+                  <span className="inventory-movement-field__help">
+                    Cada{' '}
+                    {
+                      INVENTORY_UNIT_LABELS[
+                        purchaseUnit
+                      ]
+                    }{' '}
+                    contém{' '}
+                    {formatQuantity(
+                      packageSize,
+                    )}{' '}
+                    {
+                      INVENTORY_UNIT_LABELS[
+                        item.unit
+                      ]
+                    }.
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="inventory-movement-field__help">
+                Unidade de estoque:{' '}
+                {
+                  INVENTORY_UNIT_LABELS[
+                    item.unit
+                  ]
+                }. Use saída manual somente para perdas, descarte ou ajustes.
+              </span>
+            )}
           </div>
 
           <div className="inventory-movement-field">
@@ -608,7 +723,12 @@ export function InventoryMovementPage() {
             'entry' && (
             <div className="inventory-movement-field inventory-movement-field--full">
               <label htmlFor="unitCost">
-                Custo unitário
+                Custo por{' '}
+                {
+                  INVENTORY_UNIT_LABELS[
+                    purchaseUnit
+                  ]
+                }
               </label>
 
               <MoneyInput
@@ -617,11 +737,16 @@ export function InventoryMovementPage() {
                 onChange={
                   setUnitCost
                 }
-                aria-label="Custo unitário"
+                aria-label={`Custo por ${
+                  INVENTORY_UNIT_LABELS[
+                    purchaseUnit
+                  ]
+                }`}
               />
 
               <span className="inventory-movement-field__help">
-                Digite apenas os números. O valor é formatado automaticamente.
+                Digite apenas os números. O valor é formatado automaticamente
+                no padrão brasileiro.
               </span>
             </div>
           )}
@@ -644,7 +769,7 @@ export function InventoryMovementPage() {
                 movementType ===
                 'entry'
                   ? 'Ex: Compra realizada no fornecedor habitual.'
-                  : 'Ex: Retirada para alimentação dos animais.'
+                  : 'Ex: Saco danificado, descarte ou ajuste de inventário.'
               }
               rows={4}
             />
@@ -662,7 +787,7 @@ export function InventoryMovementPage() {
                 currentStock,
               )}{' '}
               {getUnitLabel(
-                item,
+                item.unit,
                 currentStock,
               )}
             </strong>
@@ -670,19 +795,21 @@ export function InventoryMovementPage() {
 
           <div>
             <span>
-              {movementType ===
-              'entry'
-                ? 'Entrada'
-                : 'Saída'}
+              {movementType === 'entry'
+                ? 'Entrada no estoque'
+                : 'Saída do estoque'}
             </span>
 
             <strong>
-              {movementType ===
-              'entry'
+              {movementType === 'entry'
                 ? '+'
                 : '-'}
               {formatQuantity(
-                parsedQuantity,
+                stockMovementQuantity,
+              )}{' '}
+              {getUnitLabel(
+                item.unit,
+                stockMovementQuantity,
               )}
             </strong>
           </div>
@@ -703,7 +830,7 @@ export function InventoryMovementPage() {
                 projectedStock,
               )}{' '}
               {getUnitLabel(
-                item,
+                item.unit,
                 projectedStock,
               )}
             </strong>
@@ -714,7 +841,7 @@ export function InventoryMovementPage() {
           'entry' && (
           <div className="inventory-movement-total">
             <span>
-              Valor total da entrada
+              Valor total da compra
             </span>
 
             <strong>
@@ -727,11 +854,28 @@ export function InventoryMovementPage() {
               {formatQuantity(
                 parsedQuantity,
               )}{' '}
+              {getUnitLabel(
+                purchaseUnit,
+                parsedQuantity,
+              )}{' '}
               ×{' '}
               {formatCurrency(
                 unitCost,
               )}
             </small>
+
+            {usesPackageConversion && (
+              <small>
+                Entrada física:{' '}
+                {formatQuantity(
+                  stockMovementQuantity,
+                )}{' '}
+                {getUnitLabel(
+                  item.unit,
+                  stockMovementQuantity,
+                )}
+              </small>
+            )}
           </div>
         )}
 
@@ -756,10 +900,9 @@ export function InventoryMovementPage() {
           >
             {saving
               ? 'Registrando...'
-              : movementType ===
-                  'entry'
-                ? 'Registrar entrada'
-                : 'Registrar saída'}
+              : movementType === 'entry'
+                ? 'Registrar compra'
+                : 'Registrar saída manual'}
           </button>
         </div>
       </form>

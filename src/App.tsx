@@ -1,4 +1,5 @@
 import {
+  Navigate,
   Route,
   Routes,
 } from 'react-router-dom'
@@ -68,8 +69,16 @@ import {
 } from './features/inventory/InventoryPage.tsx'
 
 import {
-  NewInventoryItemPage,
-} from './features/inventory/NewInventoryItemPage.tsx'
+  InventoryPurchasePage,
+} from './features/inventory/InventoryPurchasePage.tsx'
+
+import {
+  NewProductPage,
+} from './features/inventory/NewProductPage.tsx'
+
+import {
+  ProductsPage,
+} from './features/inventory/ProductsPage.tsx'
 
 import {
   SettingsPage,
@@ -97,8 +106,12 @@ function App() {
         element={<LoginPage />}
       />
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
+      <Route
+        element={<ProtectedRoute />}
+      >
+        <Route
+          element={<AppLayout />}
+        >
           <Route
             path="/"
             element={<DashboardPage />}
@@ -170,8 +183,28 @@ function App() {
           />
 
           <Route
+            path="/estoque/compra"
+            element={<InventoryPurchasePage />}
+          />
+
+          <Route
+            path="/estoque/produtos"
+            element={<ProductsPage />}
+          />
+
+          <Route
+            path="/estoque/produtos/novo"
+            element={<NewProductPage />}
+          />
+
+          <Route
             path="/estoque/novo"
-            element={<NewInventoryItemPage />}
+            element={
+              <Navigate
+                to="/estoque/produtos/novo"
+                replace
+              />
+            }
           />
 
           <Route

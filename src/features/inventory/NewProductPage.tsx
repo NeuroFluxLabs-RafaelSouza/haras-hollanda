@@ -25,9 +25,9 @@ import {
   createInventoryItem,
 } from './inventoryService.ts'
 
-import './NewInventoryItemPage.css'
+import './NewProductPage.css'
 
-const inventoryCategories =
+const categories =
   Object.entries(
     INVENTORY_CATEGORY_LABELS,
   ) as [
@@ -35,7 +35,7 @@ const inventoryCategories =
     string,
   ][]
 
-const inventoryUnits =
+const units =
   Object.entries(
     INVENTORY_UNIT_LABELS,
   ) as [
@@ -51,16 +51,16 @@ function parseDecimal(
       .trim()
       .replace(',', '.')
 
-  const parsedValue =
+  const number =
     Number(normalizedValue)
 
   if (
-    Number.isNaN(parsedValue)
+    Number.isNaN(number)
   ) {
     return 0
   }
 
-  return parsedValue
+  return number
 }
 
 function formatQuantity(
@@ -74,7 +74,7 @@ function formatQuantity(
   ).format(value)
 }
 
-export function NewInventoryItemPage() {
+export function NewProductPage() {
   const navigate =
     useNavigate()
 
@@ -98,14 +98,21 @@ export function NewInventoryItemPage() {
   )
 
   const [
-    minimumStock,
-    setMinimumStock,
-  ] = useState('0')
+    purchaseUnit,
+    setPurchaseUnit,
+  ] = useState<
+    InventoryUnit | ''
+  >('bag')
 
   const [
     packageSize,
     setPackageSize,
   ] = useState('40')
+
+  const [
+    minimumStock,
+    setMinimumStock,
+  ] = useState('3')
 
   const [
     saving,
@@ -140,16 +147,19 @@ export function NewInventoryItemPage() {
       [minimumStock],
     )
 
-  const minimumStockInKg =
+  const convertedMinimumStock =
     useMemo(() => {
-      if (!isFeed) {
-        return minimumStockValue
+      if (
+        isFeed &&
+        packageSizeValue > 0
+      ) {
+        return (
+          minimumStockValue *
+          packageSizeValue
+        )
       }
 
-      return (
-        minimumStockValue *
-        packageSizeValue
-      )
+      return minimumStockValue
     }, [
       isFeed,
       minimumStockValue,
@@ -157,26 +167,24 @@ export function NewInventoryItemPage() {
     ])
 
   function handleCategoryChange(
-    nextCategory:
-      InventoryCategory,
+    value: InventoryCategory,
   ) {
-    setCategory(
-      nextCategory,
-    )
+    setCategory(value)
 
     if (
-      nextCategory === 'feed'
+      value === 'feed'
     ) {
       setUnit('kg')
+      setPurchaseUnit('bag')
+      setPackageSize('40')
+      setMinimumStock('3')
 
-      if (
-        packageSizeValue <= 0
-      ) {
-        setPackageSize(
-          '40',
-        )
-      }
+      return
     }
+
+    setPurchaseUnit('')
+    setPackageSize('')
+    setMinimumStock('0')
   }
 
   async function handleSubmit(
@@ -191,7 +199,7 @@ export function NewInventoryItemPage() {
 
     if (!trimmedName) {
       setError(
-        'Informe o nome do item.',
+        'Informe o nome do produto.',
       )
 
       return
@@ -208,11 +216,11 @@ export function NewInventoryItemPage() {
     }
 
     if (
-      isFeed &&
+      purchaseUnit &&
       packageSizeValue <= 0
     ) {
       setError(
-        'Informe um peso válido para o saco.',
+        'Informe a quantidade existente em cada embalagem.',
       )
 
       return
@@ -227,33 +235,29 @@ export function NewInventoryItemPage() {
 
         category,
 
-        unit:
-          isFeed
-            ? 'kg'
-            : unit,
+        unit,
 
         minimumStock:
-          isFeed
-            ? minimumStockInKg
-            : minimumStockValue,
+          convertedMinimumStock,
 
         purchaseUnit:
-          isFeed
-            ? 'bag'
-            : null,
+          purchaseUnit ||
+          null,
 
         packageSize:
-          isFeed
+          purchaseUnit
             ? packageSizeValue
             : null,
       })
 
-      navigate('/estoque')
+      navigate(
+        '/estoque/produtos',
+      )
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : 'Não foi possível cadastrar o item.'
+          : 'Não foi possível cadastrar o produto.'
 
       setError(message)
     } finally {
@@ -262,14 +266,14 @@ export function NewInventoryItemPage() {
   }
 
   return (
-    <section className="new-inventory-item-page">
-      <header className="new-inventory-item-page__header">
+    <section className="new-product-page">
+      <header className="new-product-header">
         <Link
-          className="new-inventory-item-page__back"
-          to="/estoque"
+          className="new-product-header__back"
+          to="/estoque/produtos"
         >
           <ArrowLeft size={17} />
-          Estoque
+          Produtos
         </Link>
 
         <div>
@@ -278,22 +282,22 @@ export function NewInventoryItemPage() {
           </p>
 
           <h1 className="page-header__title">
-            Novo item
+            Novo produto
           </h1>
 
           <p className="page-header__description">
-            Cadastre apenas as informações necessárias para controlar o
-            produto.
+            Cadastre o produto uma vez para utilizá-lo nas compras,
+            movimentações e rotinas do haras.
           </p>
         </div>
       </header>
 
       <form
-        className="new-inventory-item-form"
+        className="new-product-form"
         onSubmit={handleSubmit}
       >
-        <div className="new-inventory-item-form__heading">
-          <div className="new-inventory-item-form__icon">
+        <div className="new-product-form__heading">
+          <div className="new-product-form__icon">
             <PackagePlus
               size={20}
               strokeWidth={1.8}
@@ -302,24 +306,24 @@ export function NewInventoryItemPage() {
 
           <div>
             <h2>
-              Dados do item
+              Dados do produto
             </h2>
 
             <p>
-              Defina como este produto será controlado no estoque.
+              Defina como o produto é comprado e como o saldo será
+              controlado.
             </p>
           </div>
         </div>
 
-        <div className="new-inventory-item-form__content">
-          <div className="new-inventory-item-field new-inventory-item-field--full">
-            <label htmlFor="name">
-              Nome do item
+        <div className="new-product-form__content">
+          <div className="new-product-field new-product-field--full">
+            <label htmlFor="productName">
+              Nome do produto
             </label>
 
             <input
-              id="name"
-              name="name"
+              id="productName"
               type="text"
               value={name}
               onChange={(event) =>
@@ -333,15 +337,14 @@ export function NewInventoryItemPage() {
             />
           </div>
 
-          <div className="new-inventory-item-form__grid">
-            <div className="new-inventory-item-field">
+          <div className="new-product-form__grid">
+            <div className="new-product-field">
               <label htmlFor="category">
                 Categoria
               </label>
 
               <select
                 id="category"
-                name="category"
                 value={category}
                 onChange={(event) =>
                   handleCategoryChange(
@@ -350,7 +353,7 @@ export function NewInventoryItemPage() {
                   )
                 }
               >
-                {inventoryCategories.map(
+                {categories.map(
                   ([
                     value,
                     label,
@@ -366,29 +369,21 @@ export function NewInventoryItemPage() {
               </select>
             </div>
 
-            <div className="new-inventory-item-field">
+            <div className="new-product-field">
               <label htmlFor="unit">
                 Unidade de controle
               </label>
 
               {isFeed ? (
-                <>
-                  <input
-                    id="unit"
-                    value="Kg"
-                    disabled
-                    readOnly
-                  />
-
-                  <span className="new-inventory-item-field__help">
-                    Rações são controladas em kg para permitir o consumo
-                    diário dos cavalos.
-                  </span>
-                </>
+                <input
+                  id="unit"
+                  value="Kg"
+                  disabled
+                  readOnly
+                />
               ) : (
                 <select
                   id="unit"
-                  name="unit"
                   value={unit}
                   onChange={(event) =>
                     setUnit(
@@ -397,7 +392,60 @@ export function NewInventoryItemPage() {
                     )
                   }
                 >
-                  {inventoryUnits.map(
+                  {units.map(
+                    ([
+                      value,
+                      label,
+                    ]) => (
+                      <option
+                        key={value}
+                        value={value}
+                      >
+                        {label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              )}
+
+              {isFeed && (
+                <span className="new-product-field__help">
+                  Rações são controladas em kg para que o consumo dos cavalos
+                  possa ser descontado com precisão.
+                </span>
+              )}
+            </div>
+
+            <div className="new-product-field">
+              <label htmlFor="purchaseUnit">
+                Unidade de compra
+              </label>
+
+              {isFeed ? (
+                <input
+                  id="purchaseUnit"
+                  value="Saco"
+                  disabled
+                  readOnly
+                />
+              ) : (
+                <select
+                  id="purchaseUnit"
+                  value={purchaseUnit}
+                  onChange={(event) =>
+                    setPurchaseUnit(
+                      event.target
+                        .value as
+                        | InventoryUnit
+                        | '',
+                    )
+                  }
+                >
+                  <option value="">
+                    Mesma unidade do estoque
+                  </option>
+
+                  {units.map(
                     ([
                       value,
                       label,
@@ -414,72 +462,67 @@ export function NewInventoryItemPage() {
               )}
             </div>
 
-            {isFeed && (
-              <>
-                <div className="new-inventory-item-field">
-                  <label htmlFor="purchaseUnit">
-                    Unidade de compra
-                  </label>
+            <div className="new-product-field">
+              <label htmlFor="packageSize">
+                {isFeed
+                  ? 'Peso por saco'
+                  : 'Quantidade por embalagem'}
+              </label>
 
-                  <input
-                    id="purchaseUnit"
-                    value="Saco"
-                    disabled
-                    readOnly
-                  />
+              <div className="new-product-field__with-suffix">
+                <input
+                  id="packageSize"
+                  type="text"
+                  inputMode="decimal"
+                  value={packageSize}
+                  onChange={(event) =>
+                    setPackageSize(
+                      event.target.value,
+                    )
+                  }
+                  disabled={
+                    !purchaseUnit
+                  }
+                  autoComplete="off"
+                />
 
-                  <span className="new-inventory-item-field__help">
-                    A compra continua sendo registrada em sacos.
-                  </span>
-                </div>
+                <span>
+                  {
+                    INVENTORY_UNIT_LABELS[
+                      unit
+                    ]
+                  }
+                </span>
+              </div>
 
-                <div className="new-inventory-item-field">
-                  <label htmlFor="packageSize">
-                    Peso por saco
-                  </label>
+              <span className="new-product-field__help">
+                {purchaseUnit
+                  ? `Cada ${
+                      INVENTORY_UNIT_LABELS[
+                        purchaseUnit
+                      ]
+                    } possui esta quantidade em ${
+                      INVENTORY_UNIT_LABELS[
+                        unit
+                      ]
+                    }.`
+                  : 'Não há conversão de embalagem para este produto.'}
+              </span>
+            </div>
 
-                  <div className="new-inventory-item-field__unit-input">
-                    <input
-                      id="packageSize"
-                      name="packageSize"
-                      type="text"
-                      inputMode="decimal"
-                      value={packageSize}
-                      onChange={(event) =>
-                        setPackageSize(
-                          event.target.value,
-                        )
-                      }
-                      autoComplete="off"
-                    />
-
-                    <span>
-                      kg
-                    </span>
-                  </div>
-
-                  <span className="new-inventory-item-field__help">
-                    O padrão do haras é 40 kg, mas você pode alterar para outro
-                    produto.
-                  </span>
-                </div>
-              </>
-            )}
-
-            <div className={`new-inventory-item-field ${
-              isFeed
-                ? 'new-inventory-item-field--full'
-                : ''
-            }`}>
+            <div className="new-product-field new-product-field--full">
               <label htmlFor="minimumStock">
                 {isFeed
                   ? 'Estoque mínimo em sacos'
-                  : 'Estoque mínimo'}
+                  : `Estoque mínimo em ${
+                      INVENTORY_UNIT_LABELS[
+                        unit
+                      ]
+                    }`}
               </label>
 
               <input
                 id="minimumStock"
-                name="minimumStock"
                 type="text"
                 inputMode="decimal"
                 value={minimumStock}
@@ -491,37 +534,33 @@ export function NewInventoryItemPage() {
                 autoComplete="off"
               />
 
-              {isFeed ? (
-                <span className="new-inventory-item-field__help">
+              {isFeed && (
+                <span className="new-product-field__help">
                   {formatQuantity(
                     minimumStockValue,
                   )}{' '}
-                  {minimumStockValue === 1
+                  {minimumStockValue ===
+                  1
                     ? 'saco'
                     : 'sacos'}
                   {' = '}
                   <strong>
                     {formatQuantity(
-                      minimumStockInKg,
+                      convertedMinimumStock,
                     )}{' '}
                     kg
                   </strong>
                   {' '}de estoque mínimo.
-                </span>
-              ) : (
-                <span className="new-inventory-item-field__help">
-                  Quando o estoque atingir esse valor, o sistema recomendará
-                  reposição.
                 </span>
               )}
             </div>
           </div>
 
           {isFeed && (
-            <div className="new-inventory-item-conversion">
+            <div className="new-product-conversion">
               <div>
                 <span>
-                  Como o sistema vai controlar
+                  Configuração
                 </span>
 
                 <strong>
@@ -534,35 +573,36 @@ export function NewInventoryItemPage() {
               </div>
 
               <p>
-                Na compra você informa sacos. Na alimentação dos cavalos o
-                sistema desconta os quilos automaticamente.
+                Nas compras o administrador informa a quantidade de sacos.
+                O saldo do estoque permanece em kg para permitir as baixas da
+                alimentação.
               </p>
             </div>
           )}
 
           {error && (
-            <div className="new-inventory-item-form__error">
+            <div className="new-product-form__error">
               {error}
             </div>
           )}
         </div>
 
-        <div className="new-inventory-item-form__actions">
+        <div className="new-product-form__actions">
           <Link
-            className="new-inventory-item-form__cancel"
-            to="/estoque"
+            className="new-product-form__cancel"
+            to="/estoque/produtos"
           >
             Cancelar
           </Link>
 
           <button
-            className="new-inventory-item-form__submit"
+            className="new-product-form__submit"
             type="submit"
             disabled={saving}
           >
             {saving
               ? 'Cadastrando...'
-              : 'Cadastrar item'}
+              : 'Cadastrar produto'}
           </button>
         </div>
       </form>
