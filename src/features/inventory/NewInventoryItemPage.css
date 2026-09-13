@@ -1,0 +1,243 @@
+.new-inventory-item-page {
+  width: 100%;
+  max-width: 820px;
+}
+
+.new-inventory-item-header {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.new-inventory-item-header__back {
+  width: fit-content;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  color: var(--color-moss);
+  text-decoration: none;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.new-inventory-item-header__back:hover {
+  text-decoration: underline;
+}
+
+.new-inventory-item-form {
+  margin-top: 36px;
+
+  overflow: hidden;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.new-inventory-item-form__header {
+  padding: 26px;
+
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  border-bottom: 1px solid var(--color-border);
+}
+
+.new-inventory-item-form__icon {
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 11px;
+
+  background: var(--color-surface-soft);
+  color: var(--color-moss);
+}
+
+.new-inventory-item-form__header h2 {
+  margin: 0;
+
+  color: var(--color-forest);
+
+  font-size: 16px;
+}
+
+.new-inventory-item-form__header p {
+  margin: 5px 0 0;
+
+  color: var(--color-text-muted);
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.new-inventory-item-form__grid {
+  padding: 26px;
+
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 20px;
+}
+
+.new-inventory-item-field {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.new-inventory-item-field--full {
+  grid-column: 1 / -1;
+}
+
+.new-inventory-item-field label {
+  color: var(--color-text);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.new-inventory-item-field input,
+.new-inventory-item-field select {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+
+  outline: none;
+
+  background: var(--color-surface);
+  color: var(--color-text);
+
+  font: inherit;
+  font-size: 13px;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.new-inventory-item-field input:focus,
+.new-inventory-item-field select:focus {
+  border-color: var(--color-moss);
+
+  box-shadow:
+    0 0 0 3px rgba(49, 83, 67, 0.08);
+}
+
+.new-inventory-item-field__help {
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.new-inventory-item-form__error {
+  margin: 0 26px 26px;
+  padding: 12px 14px;
+
+  border: 1px solid rgba(184, 78, 78, 0.18);
+  border-radius: 11px;
+
+  background: rgba(184, 78, 78, 0.07);
+  color: var(--color-danger);
+
+  font-size: 12px;
+}
+
+.new-inventory-item-form__actions {
+  padding: 20px 26px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+
+  border-top: 1px solid var(--color-border);
+
+  background: var(--color-surface-soft);
+}
+
+.new-inventory-item-cancel,
+.new-inventory-item-submit {
+  min-height: 42px;
+  padding: 0 17px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.new-inventory-item-cancel {
+  border: 1px solid var(--color-border);
+
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.new-inventory-item-submit {
+  border: 0;
+
+  background: var(--color-forest);
+  color: #ffffff;
+
+  cursor: pointer;
+}
+
+.new-inventory-item-submit:hover:not(:disabled) {
+  background: var(--color-moss);
+}
+
+.new-inventory-item-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 720px) {
+  .new-inventory-item-form__grid {
+    grid-template-columns: 1fr;
+
+    padding: 20px;
+  }
+
+  .new-inventory-item-field--full {
+    grid-column: auto;
+  }
+
+  .new-inventory-item-form__header {
+    padding: 20px;
+  }
+
+  .new-inventory-item-form__actions {
+    padding: 18px 20px;
+
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .new-inventory-item-cancel,
+  .new-inventory-item-submit {
+    width: 100%;
+  }
+}
