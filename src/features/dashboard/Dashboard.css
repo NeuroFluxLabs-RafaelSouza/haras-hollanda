@@ -10,7 +10,9 @@
   margin-bottom: 40px;
 
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
   gap: 16px;
 }
 
@@ -180,12 +182,14 @@
 
 .dashboard-section__eyebrow {
   display: block;
+
   margin-bottom: 4px;
 
   color: var(--color-text-muted);
 
   font-size: 12px;
   font-weight: 600;
+
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -209,6 +213,7 @@
 
   font-size: 13px;
   font-weight: 600;
+  text-decoration: none;
 }
 
 .dashboard-section__action:hover {
@@ -225,17 +230,74 @@
 }
 
 .appointment {
+  position: relative;
+
   min-height: 74px;
   padding: 14px 18px;
 
   display: grid;
-  grid-template-columns: 36px 58px 1fr auto;
+  grid-template-columns:
+    36px 58px 1fr auto;
+
   align-items: center;
   gap: 12px;
+
+  color: inherit;
 }
 
 .appointment + .appointment {
   border-top: 1px solid var(--color-border);
+}
+
+/*
+  Compromisso clicável do Dashboard.
+  O Link ocupa todo o card e dá feedback visual
+  antes de levar o usuário para o compromisso
+  correspondente na Agenda.
+*/
+
+.appointment--clickable {
+  cursor: pointer;
+
+  text-decoration: none;
+
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.appointment--clickable:hover {
+  background: rgba(201, 169, 107, 0.1);
+
+  box-shadow:
+    inset 4px 0 0 var(--color-gold);
+}
+
+.appointment--clickable:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: -2px;
+
+  background: rgba(201, 169, 107, 0.1);
+
+  box-shadow:
+    inset 4px 0 0 var(--color-gold);
+}
+
+.appointment--clickable:hover
+  .appointment__content
+  strong,
+.appointment--clickable:focus-visible
+  .appointment__content
+  strong {
+  color: var(--color-forest);
+}
+
+.appointment--clickable:hover
+  .appointment__icon,
+.appointment--clickable:focus-visible
+  .appointment__icon {
+  background: rgba(201, 169, 107, 0.16);
+  color: var(--color-forest);
 }
 
 .appointment__icon {
@@ -249,10 +311,22 @@
 
   background: var(--color-surface-soft);
   color: var(--color-text-muted);
+
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
 
 .appointment__icon--completed {
   background: rgba(63, 122, 87, 0.12);
+  color: var(--color-success);
+}
+
+.appointment--clickable:hover
+  .appointment__icon--completed,
+.appointment--clickable:focus-visible
+  .appointment__icon--completed {
+  background: rgba(63, 122, 87, 0.16);
   color: var(--color-success);
 }
 
@@ -264,6 +338,8 @@
 }
 
 .appointment__content {
+  min-width: 0;
+
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -273,6 +349,8 @@
   color: var(--color-text);
 
   font-size: 14px;
+
+  transition: color 180ms ease;
 }
 
 .appointment__content span {
@@ -297,22 +375,34 @@
   background: rgba(63, 122, 87, 0.1);
   color: var(--color-success);
 }
-/* Estado vazio / carregamento dos compromissos */
 
-.appointment:has(.appointment__content:last-child) {
-  grid-template-columns: 36px 1fr;
+/*
+  Estado vazio / carregamento dos compromissos.
+*/
+
+.appointment:has(
+    .appointment__content:last-child
+  ) {
+  grid-template-columns:
+    36px 1fr;
 }
 
-.appointment:has(.appointment__content:last-child)
+.appointment:has(
+    .appointment__content:last-child
+  )
   .appointment__content {
   grid-column: 2;
 }
 
-.appointment:has(.appointment__content:only-child) {
+.appointment:has(
+    .appointment__content:only-child
+  ) {
   grid-template-columns: 1fr;
 }
 
-.appointment:has(.appointment__content:only-child)
+.appointment:has(
+    .appointment__content:only-child
+  )
   .appointment__content {
   grid-column: 1;
 }
@@ -325,11 +415,13 @@
 
 @media (max-width: 720px) {
   .appointment {
-    grid-template-columns: 36px 52px 1fr;
+    grid-template-columns:
+      36px 52px 1fr;
   }
 
   .appointment__status {
     grid-column: 3;
+
     justify-self: start;
   }
 }

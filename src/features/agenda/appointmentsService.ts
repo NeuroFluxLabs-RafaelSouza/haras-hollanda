@@ -15,6 +15,7 @@ type AppointmentRow = {
   event_type: AppointmentEventType
   scheduled_at: string
   horse_id: string | null
+  professional_id: string | null
   status: AppointmentStatus
   created_at: string
 }
@@ -24,6 +25,12 @@ type HorseRelation = {
   name: string
 }
 
+type ProfessionalRelation = {
+  id: string
+  name: string
+  specialty: string | null
+}
+
 type Relation<T> =
   | T
   | T[]
@@ -31,10 +38,13 @@ type Relation<T> =
 
 type AppointmentListRow = AppointmentRow & {
   horse: Relation<HorseRelation>
+  professional: Relation<ProfessionalRelation>
 }
 
 export type AppointmentListItem = Appointment & {
   horseName: string | null
+  professionalName: string | null
+  professionalSpecialty: string | null
 }
 
 const appointmentSelect = `
@@ -44,6 +54,7 @@ const appointmentSelect = `
   event_type,
   scheduled_at,
   horse_id,
+  professional_id,
   status,
   created_at
 `
@@ -55,11 +66,17 @@ const appointmentListSelect = `
   event_type,
   scheduled_at,
   horse_id,
+  professional_id,
   status,
   created_at,
   horse:horses (
     id,
     name
+  ),
+  professional:professionals (
+    id,
+    name,
+    specialty
   )
 `
 
@@ -87,6 +104,7 @@ function mapAppointment(
     eventType: row.event_type,
     scheduledAt: row.scheduled_at,
     horseId: row.horse_id,
+    professionalId: row.professional_id,
     status: row.status,
     createdAt: row.created_at,
   }
@@ -95,11 +113,23 @@ function mapAppointment(
 function mapAppointmentListItem(
   row: AppointmentListRow,
 ): AppointmentListItem {
-  const horse = getSingleRelation(row.horse)
+  const horse =
+    getSingleRelation(row.horse)
+
+  const professional =
+    getSingleRelation(row.professional)
 
   return {
     ...mapAppointment(row),
-    horseName: horse?.name ?? null,
+
+    horseName:
+      horse?.name ?? null,
+
+    professionalName:
+      professional?.name ?? null,
+
+    professionalSpecialty:
+      professional?.specialty ?? null,
   }
 }
 
@@ -212,6 +242,8 @@ export async function createAppointment(
       event_type: input.eventType,
       scheduled_at: input.scheduledAt,
       horse_id: input.horseId,
+      professional_id:
+        input.professionalId,
     })
     .select(appointmentSelect)
     .single()
@@ -239,6 +271,8 @@ export async function updateAppointment(
       event_type: input.eventType,
       scheduled_at: input.scheduledAt,
       horse_id: input.horseId,
+      professional_id:
+        input.professionalId,
       status: input.status,
     })
     .eq('id', appointmentId)
@@ -278,4 +312,19 @@ export async function updateAppointmentStatus(
   return mapAppointment(
     data as AppointmentRow,
   )
+}
+
+export async function deleteAppointment(
+  appointmentId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('appointments')
+    .delete()
+    .eq('id', appointmentId)
+
+  if (error) {
+    throw new Error(
+      `Erro ao excluir compromisso: ${error.message}`,
+    )
+  }
 }

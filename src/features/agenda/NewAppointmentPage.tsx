@@ -33,6 +33,10 @@ import {
   createAppointment,
 } from './appointmentsService.ts'
 
+import {
+  getProfessionals,
+} from './professionalsService.ts'
+
 import './NewAppointmentPage.css'
 
 const observationPlaceholders: Record<
@@ -40,7 +44,7 @@ const observationPlaceholders: Record<
   string
 > = {
   feeding:
-    'Ex: Reduzir a quantidade de ração no período da tarde.',
+    'Ex: Ajustar a quantidade de ração no período da tarde.',
 
   veterinary:
     'Ex: Avaliar sensibilidade na pata dianteira direita.',
@@ -52,16 +56,16 @@ const observationPlaceholders: Record<
     'Ex: Aplicar vacina contra influenza e registrar o atendimento.',
 
   training:
-    'Ex: Treino leve de marcha por aproximadamente 40 minutos.',
+    'Ex: Realizar treino leve de marcha por aproximadamente 40 minutos.',
 
   medication:
     'Ex: Administrar medicamento conforme orientação veterinária.',
 
   management:
-    'Ex: Realizar inspeção geral da estrutura e dos animais.',
+    'Ex: Realizar manejo específico deste animal.',
 
   other:
-    'Ex: Adicione informações importantes sobre esta atividade.',
+    'Ex: Descreva a atividade que será realizada com este cavalo.',
 }
 
 export function NewAppointmentPage() {
@@ -71,6 +75,21 @@ export function NewAppointmentPage() {
     horseOptions,
     setHorseOptions,
   ] = useState<SearchableSelectOption[]>([])
+
+  const [
+    professionalOptions,
+    setProfessionalOptions,
+  ] = useState<SearchableSelectOption[]>([])
+
+  const [
+    horseId,
+    setHorseId,
+  ] = useState('')
+
+  const [
+    professionalId,
+    setProfessionalId,
+  ] = useState('')
 
   const [
     eventType,
@@ -85,18 +104,13 @@ export function NewAppointmentPage() {
   ] = useState('')
 
   const [
-    horseId,
-    setHorseId,
-  ] = useState('')
-
-  const [
     description,
     setDescription,
   ] = useState('')
 
   const [
-    loadingHorses,
-    setLoadingHorses,
+    loadingOptions,
+    setLoadingOptions,
   ] = useState(true)
 
   const [
@@ -112,34 +126,50 @@ export function NewAppointmentPage() {
   useEffect(() => {
     let isMounted = true
 
-    async function loadHorses() {
+    async function loadOptions() {
       try {
-        const horses =
-          await getHorses()
+        const [
+          horses,
+          professionals,
+        ] = await Promise.all([
+          getHorses(),
+          getProfessionals(),
+        ])
 
         if (!isMounted) {
           return
         }
 
-        const activeHorses =
-          horses.filter(
-            (horse) => horse.active,
-          )
+        setHorseOptions(
+          horses
+            .filter(
+              (horse) => horse.active,
+            )
+            .map(
+              (horse) => ({
+                value: horse.id,
+                label: horse.name,
+              }),
+            ),
+        )
 
-        setHorseOptions([
-          {
-            value: '',
-            label:
-              'Atividade geral do haras',
-          },
+        setProfessionalOptions(
+          professionals
+            .filter(
+              (professional) =>
+                professional.active,
+            )
+            .map(
+              (professional) => ({
+                value: professional.id,
 
-          ...activeHorses.map(
-            (horse) => ({
-              value: horse.id,
-              label: horse.name,
-            }),
-          ),
-        ])
+                label:
+                  professional.specialty
+                    ? `${professional.name} · ${professional.specialty}`
+                    : professional.name,
+              }),
+            ),
+        )
       } catch (error) {
         if (!isMounted) {
           return
@@ -148,17 +178,17 @@ export function NewAppointmentPage() {
         const message =
           error instanceof Error
             ? error.message
-            : 'Não foi possível carregar os cavalos.'
+            : 'Não foi possível carregar os dados do formulário.'
 
         setError(message)
       } finally {
         if (isMounted) {
-          setLoadingHorses(false)
+          setLoadingOptions(false)
         }
       }
     }
 
-    loadHorses()
+    loadOptions()
 
     return () => {
       isMounted = false
@@ -183,6 +213,14 @@ export function NewAppointmentPage() {
     event.preventDefault()
 
     setError(null)
+
+    if (!horseId) {
+      setError(
+        'Selecione o cavalo deste compromisso.',
+      )
+
+      return
+    }
 
     if (!scheduledAt) {
       setError(
@@ -219,16 +257,17 @@ export function NewAppointmentPage() {
         title: generatedTitle,
 
         description:
-          description.trim() ||
-          null,
+          description.trim() || null,
 
         eventType,
 
         scheduledAt:
           scheduledDate.toISOString(),
 
-        horseId:
-          horseId || null,
+        horseId,
+
+        professionalId:
+          professionalId || null,
       })
 
       navigate('/agenda')
@@ -265,7 +304,7 @@ export function NewAppointmentPage() {
           </h1>
 
           <p className="page-header__description">
-            Escolha o cavalo, defina a atividade e programe o atendimento.
+            Programe serviços, atendimentos e atividades do cavalo.
           </p>
         </div>
       </header>
@@ -288,7 +327,8 @@ export function NewAppointmentPage() {
             </h2>
 
             <p>
-              Organize a atividade na ordem em que ela acontece na operação.
+              Escolha o animal e organize as informações necessárias para a
+              atividade.
             </p>
           </div>
         </div>
@@ -299,7 +339,7 @@ export function NewAppointmentPage() {
               Cavalo
             </label>
 
-            {loadingHorses ? (
+            {loadingOptions ? (
               <div className="new-appointment-form__state">
                 Carregando cavalos...
               </div>
@@ -308,21 +348,16 @@ export function NewAppointmentPage() {
                 id="horse"
                 value={horseId}
                 options={horseOptions}
-                placeholder="Pesquise um cavalo..."
+                placeholder="Pesquise o nome do cavalo..."
                 emptyMessage="Nenhum cavalo encontrado."
                 onChange={setHorseId}
               />
             )}
-
-            <span className="new-appointment-field__help">
-              Se não for uma atividade ligada a um cavalo específico,
-              mantenha como atividade geral do haras.
-            </span>
           </div>
 
           <div className="new-appointment-field new-appointment-field--full">
             <label htmlFor="eventType">
-              Tipo de atividade
+              Tipo de serviço
             </label>
 
             <select
@@ -347,6 +382,33 @@ export function NewAppointmentPage() {
                 ),
               )}
             </select>
+          </div>
+
+          <div className="new-appointment-field new-appointment-field--full">
+            <label htmlFor="professional">
+              Técnico responsável
+            </label>
+
+            {loadingOptions ? (
+              <div className="new-appointment-form__state">
+                Carregando profissionais...
+              </div>
+            ) : (
+              <SearchableSelect
+                id="professional"
+                value={professionalId}
+                options={professionalOptions}
+                placeholder="Pesquise o responsável..."
+                emptyMessage="Nenhum profissional encontrado."
+                onChange={setProfessionalId}
+              />
+            )}
+
+            {professionalOptions.length === 0 && (
+              <span className="new-appointment-field__help">
+                Nenhum profissional ativo cadastrado.
+              </span>
+            )}
           </div>
 
           <div className="new-appointment-field new-appointment-field--full">
@@ -389,11 +451,6 @@ export function NewAppointmentPage() {
               }
               rows={5}
             />
-
-            <span className="new-appointment-field__help">
-              Registre somente informações importantes para executar a
-              atividade.
-            </span>
           </div>
         </div>
 
@@ -416,7 +473,8 @@ export function NewAppointmentPage() {
             type="submit"
             disabled={
               saving ||
-              loadingHorses
+              loadingOptions ||
+              horseOptions.length === 0
             }
           >
             {saving

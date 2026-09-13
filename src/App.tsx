@@ -4,6 +4,8 @@ import { AppLayout } from './components/layout/AppLayout.tsx'
 
 import { AgendaPage } from './features/agenda/AgendaPage.tsx'
 import { NewAppointmentPage } from './features/agenda/NewAppointmentPage.tsx'
+import { NewProfessionalPage } from './features/agenda/NewProfessionalPage.tsx'
+import { ProfessionalsPage } from './features/agenda/ProfessionalsPage.tsx'
 
 import { LoginPage } from './features/auth/LoginPage.tsx'
 import { ProtectedRoute } from './features/auth/ProtectedRoute.tsx'
@@ -23,8 +25,12 @@ import { InventoryPage } from './features/inventory/InventoryPage.tsx'
 import { SettingsPage } from './features/settings/SettingsPage.tsx'
 
 import { ManageStallPage } from './features/stalls/ManageStallPage.tsx'
+
 import { NewStallPage } from './features/stalls/NewStallPage.tsx'
+
 import { StallsPage } from './features/stalls/StallsPage.tsx'
+
+import { EditAppointmentPage } from './features/agenda/EditAppointmentPage.tsx'
 
 import './App.css'
 
@@ -76,6 +82,20 @@ function App() {
           <Route
             path="/agenda/novo"
             element={<NewAppointmentPage />}
+          />
+
+          <Route
+            path="/agenda/profissionais"
+            element={<ProfessionalsPage />}
+          />
+
+          <Route
+            path="/agenda/profissionais/novo"
+            element={<NewProfessionalPage />}
+          />
+          <Route
+            path="/agenda/:appointmentId/editar"
+            element={<EditAppointmentPage />}
           />
 
           <Route

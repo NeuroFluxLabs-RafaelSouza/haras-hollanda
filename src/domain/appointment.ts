@@ -20,6 +20,7 @@ export type Appointment = {
   eventType: AppointmentEventType
   scheduledAt: string
   horseId: string | null
+  professionalId: string | null
   status: AppointmentStatus
   createdAt: string
 }
@@ -30,6 +31,7 @@ export type CreateAppointmentInput = {
   eventType: AppointmentEventType
   scheduledAt: string
   horseId: string | null
+  professionalId: string | null
 }
 
 export type UpdateAppointmentInput = {
@@ -38,6 +40,7 @@ export type UpdateAppointmentInput = {
   eventType: AppointmentEventType
   scheduledAt: string
   horseId: string | null
+  professionalId: string | null
   status: AppointmentStatus
 }
 

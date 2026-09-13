@@ -80,11 +80,7 @@ function getAppointmentDescription(
     return appointment.horseName
   }
 
-  if (appointment.description) {
-    return appointment.description
-  }
-
-  return 'Atividade geral do haras'
+  return 'Cavalo não identificado'
 }
 
 export function Dashboard() {
@@ -450,11 +446,15 @@ export function Dashboard() {
             <div className="appointments">
               {todayAppointments.map(
                 (appointment) => (
-                  <div
-                    className="appointment"
+                  <Link
+                    className="appointment appointment--clickable"
                     key={
                       appointment.id
                     }
+                    to={`/agenda?appointment=${appointment.id}`}
+                    aria-label={`Abrir compromisso ${appointment.title} de ${getAppointmentDescription(
+                      appointment,
+                    )}`}
                   >
                     <div
                       className={`appointment__icon ${
@@ -509,7 +509,7 @@ export function Dashboard() {
                         ? 'Concluído'
                         : 'Pendente'}
                     </span>
-                  </div>
+                  </Link>
                 ),
               )}
             </div>

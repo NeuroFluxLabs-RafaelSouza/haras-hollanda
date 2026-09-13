@@ -9,15 +9,21 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  FileText,
   PawPrint,
+  Pencil,
   Plus,
+  UserRound,
+  UsersRound,
   XCircle,
 } from 'lucide-react'
 
-import { Link } from 'react-router-dom'
+import {
+  Link,
+  useSearchParams,
+} from 'react-router-dom'
 
 import {
-  APPOINTMENT_EVENT_LABELS,
   APPOINTMENT_STATUS_LABELS,
 } from '../../domain/appointment.ts'
 
@@ -58,22 +64,35 @@ function formatTime(
 function getDateKey(
   scheduledAt: string,
 ) {
-  const date = new Date(scheduledAt)
+  const date =
+    new Date(scheduledAt)
 
-  const year = date.getFullYear()
+  const year =
+    date.getFullYear()
 
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, '0')
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(2, '0')
 
-  const day = String(
-    date.getDate(),
-  ).padStart(2, '0')
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(2, '0')
 
   return `${year}-${month}-${day}`
 }
 
 export function AgendaPage() {
+  const [
+    searchParams,
+  ] = useSearchParams()
+
+  const selectedAppointmentId =
+    searchParams.get(
+      'appointment',
+    )
+
   const [
     appointments,
     setAppointments,
@@ -130,6 +149,45 @@ export function AgendaPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (
+      loading ||
+      !selectedAppointmentId
+    ) {
+      return
+    }
+
+    const selectedElement =
+      document.getElementById(
+        `appointment-${selectedAppointmentId}`,
+      )
+
+    if (!selectedElement) {
+      return
+    }
+
+    const timeoutId =
+      window.setTimeout(
+        () => {
+          selectedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          })
+        },
+        100,
+      )
+
+    return () => {
+      window.clearTimeout(
+        timeoutId,
+      )
+    }
+  }, [
+    loading,
+    selectedAppointmentId,
+    appointments,
+  ])
+
   const groupedAppointments =
     useMemo(() => {
       const groups = new Map<
@@ -139,14 +197,17 @@ export function AgendaPage() {
 
       appointments.forEach(
         (appointment) => {
-          const key = getDateKey(
-            appointment.scheduledAt,
-          )
+          const key =
+            getDateKey(
+              appointment.scheduledAt,
+            )
 
           const existing =
             groups.get(key) ?? []
 
-          existing.push(appointment)
+          existing.push(
+            appointment,
+          )
 
           groups.set(
             key,
@@ -217,7 +278,7 @@ export function AgendaPage() {
         </h1>
 
         <p className="page-header__description">
-          Organize atendimentos, manejos e atividades programadas do haras.
+          Organize visitas técnicas, treinos e atendimentos dos cavalos.
         </p>
       </header>
 
@@ -226,13 +287,23 @@ export function AgendaPage() {
           {appointmentCountLabel}
         </span>
 
-        <Link
-          className="agenda-add-button"
-          to="/agenda/novo"
-        >
-          <Plus size={17} />
-          Novo compromisso
-        </Link>
+        <div className="agenda-toolbar__actions">
+          <Link
+            className="agenda-professionals-button"
+            to="/agenda/profissionais"
+          >
+            <UsersRound size={17} />
+            Profissionais
+          </Link>
+
+          <Link
+            className="agenda-add-button"
+            to="/agenda/novo"
+          >
+            <Plus size={17} />
+            Novo compromisso
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -291,114 +362,179 @@ export function AgendaPage() {
 
                   <div className="agenda-list">
                     {items.map(
-                      (appointment) => (
-                        <article
-                          className={`agenda-item agenda-item--${appointment.status}`}
-                          key={appointment.id}
-                        >
-                          <div className="agenda-item__time">
-                            <Clock
-                              size={16}
-                              strokeWidth={1.8}
-                            />
+                      (appointment) => {
+                        const isSelected =
+                          appointment.id ===
+                          selectedAppointmentId
 
-                            <strong>
-                              {formatTime(
-                                appointment.scheduledAt,
-                              )}
-                            </strong>
-                          </div>
+                        return (
+                          <article
+                            id={`appointment-${appointment.id}`}
+                            className={`agenda-item agenda-item--${appointment.status} ${
+                              isSelected
+                                ? 'agenda-item--selected'
+                                : ''
+                            }`}
+                            key={
+                              appointment.id
+                            }
+                          >
+                            <div className="agenda-item__time">
+                              <Clock
+                                size={16}
+                                strokeWidth={1.8}
+                              />
 
-                          <div className="agenda-item__content">
-                            <div className="agenda-item__title-row">
-                              <div>
+                              <strong>
+                                {formatTime(
+                                  appointment.scheduledAt,
+                                )}
+                              </strong>
+                            </div>
+
+                            <div className="agenda-item__content">
+                              <div className="agenda-item__title-row">
                                 <h2>
-                                  {appointment.title}
+                                  {
+                                    appointment.title
+                                  }
                                 </h2>
 
-                                <span className="agenda-item__type">
+                                <span
+                                  className={`agenda-item__status agenda-item__status--${appointment.status}`}
+                                >
                                   {
-                                    APPOINTMENT_EVENT_LABELS[
-                                      appointment.eventType
+                                    APPOINTMENT_STATUS_LABELS[
+                                      appointment.status
                                     ]
                                   }
                                 </span>
                               </div>
 
-                              <span
-                                className={`agenda-item__status agenda-item__status--${appointment.status}`}
-                              >
-                                {
-                                  APPOINTMENT_STATUS_LABELS[
-                                    appointment.status
-                                  ]
-                                }
-                              </span>
+                              <div className="agenda-item__information">
+                                <div className="agenda-item__info">
+                                  <UserRound
+                                    size={15}
+                                    strokeWidth={1.8}
+                                  />
+
+                                  <div>
+                                    <span>
+                                      Responsável
+                                    </span>
+
+                                    <strong>
+                                      {appointment.professionalName ??
+                                        'Não definido'}
+                                    </strong>
+
+                                    {appointment.professionalSpecialty && (
+                                      <small>
+                                        {
+                                          appointment.professionalSpecialty
+                                        }
+                                      </small>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="agenda-item__info">
+                                  <PawPrint
+                                    size={15}
+                                    strokeWidth={1.8}
+                                  />
+
+                                  <div>
+                                    <span>
+                                      Animal
+                                    </span>
+
+                                    <strong>
+                                      {appointment.horseName ??
+                                        'Não identificado'}
+                                    </strong>
+                                  </div>
+                                </div>
+
+                                {appointment.description && (
+                                  <div className="agenda-item__info agenda-item__info--description">
+                                    <FileText
+                                      size={15}
+                                      strokeWidth={1.8}
+                                    />
+
+                                    <div>
+                                      <span>
+                                        Observação
+                                      </span>
+
+                                      <p>
+                                        {
+                                          appointment.description
+                                        }
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
-                            {appointment.horseName && (
-                              <div className="agenda-item__horse">
-                                <PawPrint
-                                  size={15}
-                                  strokeWidth={1.8}
-                                />
-
-                                <span>
-                                  {appointment.horseName}
-                                </span>
-                              </div>
-                            )}
-
-                            {appointment.description && (
-                              <p className="agenda-item__description">
-                                {appointment.description}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="agenda-item__actions">
-                            {appointment.status ===
-                              'pending' && (
-                              <button
-                                type="button"
-                                className="agenda-item__complete"
-                                disabled={
-                                  updatingAppointmentId ===
-                                  appointment.id
-                                }
-                                onClick={() =>
-                                  handleComplete(
-                                    appointment.id,
-                                  )
-                                }
+                            <div className="agenda-item__actions">
+                              <Link
+                                className="agenda-item__edit"
+                                to={`/agenda/${appointment.id}/editar`}
                               >
-                                <Check size={15} />
+                                <Pencil
+                                  size={15}
+                                />
+                                Editar
+                              </Link>
 
-                                {updatingAppointmentId ===
-                                appointment.id
-                                  ? 'Salvando...'
-                                  : 'Concluir'}
-                              </button>
-                            )}
+                              {appointment.status ===
+                                'pending' && (
+                                <button
+                                  type="button"
+                                  className="agenda-item__complete"
+                                  disabled={
+                                    updatingAppointmentId ===
+                                    appointment.id
+                                  }
+                                  onClick={() =>
+                                    handleComplete(
+                                      appointment.id,
+                                    )
+                                  }
+                                >
+                                  <Check
+                                    size={15}
+                                  />
 
-                            {appointment.status ===
-                              'completed' && (
-                              <CheckCircle2
-                                className="agenda-item__status-icon agenda-item__status-icon--completed"
-                                size={19}
-                              />
-                            )}
+                                  {updatingAppointmentId ===
+                                  appointment.id
+                                    ? 'Salvando...'
+                                    : 'Concluir'}
+                                </button>
+                              )}
 
-                            {appointment.status ===
-                              'cancelled' && (
-                              <XCircle
-                                className="agenda-item__status-icon agenda-item__status-icon--cancelled"
-                                size={19}
-                              />
-                            )}
-                          </div>
-                        </article>
-                      ),
+                              {appointment.status ===
+                                'completed' && (
+                                <CheckCircle2
+                                  className="agenda-item__status-icon agenda-item__status-icon--completed"
+                                  size={19}
+                                />
+                              )}
+
+                              {appointment.status ===
+                                'cancelled' && (
+                                <XCircle
+                                  className="agenda-item__status-icon agenda-item__status-icon--cancelled"
+                                  size={19}
+                                />
+                              )}
+                            </div>
+                          </article>
+                        )
+                      },
                     )}
                   </div>
                 </section>
