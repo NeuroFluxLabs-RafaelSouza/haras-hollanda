@@ -49,6 +49,14 @@ import {
 } from './features/dashboard/DashboardPage.tsx'
 
 import {
+  DailyFeedingPage,
+} from './features/feeding/DailyFeedingPage.tsx'
+
+import {
+  FeedingPlanPage,
+} from './features/feeding/FeedingPlanPage.tsx'
+
+import {
   FinancePage,
 } from './features/finance/FinancePage.tsx'
 
@@ -125,6 +133,16 @@ function App() {
           <Route
             path="/cavalos/novo"
             element={<NewHorsesPage />}
+          />
+
+          <Route
+            path="/cavalos/alimentacao-hoje"
+            element={<DailyFeedingPage />}
+          />
+
+          <Route
+            path="/cavalos/:horseId/alimentacao"
+            element={<FeedingPlanPage />}
           />
 
           <Route

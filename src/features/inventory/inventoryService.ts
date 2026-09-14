@@ -17,6 +17,16 @@ import {
   supabase,
 } from '../../lib/supabase.ts'
 
+export const INVENTORY_REPLENISHMENT_DAYS =
+  7
+
+export type InventoryOperationalSummary =
+  InventoryItemSummary & {
+    dailyConsumption: number
+    autonomyDays: number | null
+    needsReplenishment: boolean
+  }
+
 type InventoryItemRow = {
   id: string
   name: string
@@ -76,6 +86,21 @@ type InventoryMovementRow = {
   created_at: string
 }
 
+type FeedingPlanInventoryRow = {
+  id: string
+  horse_id: string
+  inventory_item_id: string
+}
+
+type FeedingMealConsumptionRow = {
+  feeding_plan_id: string
+  quantity: number | string
+}
+
+type ActiveHorseRow = {
+  id: string
+}
+
 const inventoryItemSelect = `
   id,
   name,
@@ -109,9 +134,11 @@ function mapInventoryItem(
   row: InventoryItemRow,
 ): InventoryItem {
   return {
-    id: row.id,
+    id:
+      row.id,
 
-    name: row.name,
+    name:
+      row.name,
 
     category:
       row.category,
@@ -123,7 +150,8 @@ function mapInventoryItem(
       row.purchase_unit,
 
     packageSize:
-      row.package_size === null
+      row.package_size ===
+      null
         ? null
         : Number(
             row.package_size,
@@ -146,7 +174,8 @@ function mapInventoryMovement(
   row: InventoryMovementRow,
 ): InventoryMovement {
   return {
-    id: row.id,
+    id:
+      row.id,
 
     itemId:
       row.item_id,
@@ -160,7 +189,8 @@ function mapInventoryMovement(
       ),
 
     unitCost:
-      row.unit_cost === null
+      row.unit_cost ===
+      null
         ? null
         : Number(
             row.unit_cost,
@@ -190,14 +220,16 @@ function mapInventoryMovement(
       row.purchase_unit,
 
     packageSize:
-      row.package_size === null
+      row.package_size ===
+      null
         ? null
         : Number(
             row.package_size,
           ),
 
     totalCost:
-      row.total_cost === null
+      row.total_cost ===
+      null
         ? null
         : Number(
             row.total_cost,
@@ -208,6 +240,159 @@ function mapInventoryMovement(
   }
 }
 
+async function getDailyFeedingConsumptionByItem(): Promise<
+  Map<string, number>
+> {
+  const [
+    plansResult,
+    mealsResult,
+    horsesResult,
+  ] = await Promise.all([
+    supabase
+      .from('feeding_plans')
+      .select(`
+        id,
+        horse_id,
+        inventory_item_id
+      `)
+      .eq(
+        'active',
+        true,
+      ),
+
+    supabase
+      .from('feeding_plan_meals')
+      .select(`
+        feeding_plan_id,
+        quantity
+      `)
+      .eq(
+        'active',
+        true,
+      ),
+
+    supabase
+      .from('horses')
+      .select('id')
+      .eq(
+        'active',
+        true,
+      ),
+  ])
+
+  if (plansResult.error) {
+    throw new Error(
+      `Erro ao buscar planos alimentares: ${plansResult.error.message}`,
+    )
+  }
+
+  if (mealsResult.error) {
+    throw new Error(
+      `Erro ao buscar consumo alimentar: ${mealsResult.error.message}`,
+    )
+  }
+
+  if (horsesResult.error) {
+    throw new Error(
+      `Erro ao verificar cavalos ativos: ${horsesResult.error.message}`,
+    )
+  }
+
+  const activeHorseIds =
+    new Set(
+      (
+        horsesResult.data ??
+        []
+      ).map(
+        (horse) =>
+          (
+            horse as ActiveHorseRow
+          ).id,
+      ),
+    )
+
+  const inventoryItemByPlanId =
+    new Map<
+      string,
+      string
+    >()
+
+  for (
+    const row
+    of plansResult.data ??
+      []
+  ) {
+    const plan =
+      row as FeedingPlanInventoryRow
+
+    if (
+      !activeHorseIds.has(
+        plan.horse_id,
+      )
+    ) {
+      continue
+    }
+
+    inventoryItemByPlanId.set(
+      plan.id,
+      plan.inventory_item_id,
+    )
+  }
+
+  const consumptionByItem =
+    new Map<
+      string,
+      number
+    >()
+
+  for (
+    const row
+    of mealsResult.data ??
+      []
+  ) {
+    const meal =
+      row as FeedingMealConsumptionRow
+
+    const itemId =
+      inventoryItemByPlanId.get(
+        meal.feeding_plan_id,
+      )
+
+    if (!itemId) {
+      continue
+    }
+
+    const quantity =
+      Number(
+        meal.quantity,
+      )
+
+    if (
+      !Number.isFinite(
+        quantity,
+      ) ||
+      quantity <=
+        0
+    ) {
+      continue
+    }
+
+    const currentConsumption =
+      consumptionByItem.get(
+        itemId,
+      ) ??
+      0
+
+    consumptionByItem.set(
+      itemId,
+      currentConsumption +
+        quantity,
+    )
+  }
+
+  return consumptionByItem
+}
+
 export async function getInventoryItems(): Promise<
   InventoryItem[]
 > {
@@ -216,11 +401,14 @@ export async function getInventoryItems(): Promise<
     error,
   } = await supabase
     .from('inventory_items')
-    .select(inventoryItemSelect)
+    .select(
+      inventoryItemSelect,
+    )
     .order(
       'name',
       {
-        ascending: true,
+        ascending:
+          true,
       },
     )
 
@@ -231,7 +419,8 @@ export async function getInventoryItems(): Promise<
   }
 
   return (
-    data ?? []
+    data ??
+    []
   ).map(
     (item) =>
       mapInventoryItem(
@@ -248,7 +437,9 @@ export async function getActiveInventoryItems(): Promise<
     error,
   } = await supabase
     .from('inventory_items')
-    .select(inventoryItemSelect)
+    .select(
+      inventoryItemSelect,
+    )
     .eq(
       'active',
       true,
@@ -256,7 +447,8 @@ export async function getActiveInventoryItems(): Promise<
     .order(
       'name',
       {
-        ascending: true,
+        ascending:
+          true,
       },
     )
 
@@ -267,7 +459,8 @@ export async function getActiveInventoryItems(): Promise<
   }
 
   return (
-    data ?? []
+    data ??
+    []
   ).map(
     (item) =>
       mapInventoryItem(
@@ -284,7 +477,9 @@ export async function getInventoryItemById(
     error,
   } = await supabase
     .from('inventory_items')
-    .select(inventoryItemSelect)
+    .select(
+      inventoryItemSelect,
+    )
     .eq(
       'id',
       itemId,
@@ -414,7 +609,8 @@ export async function getInventoryMovements(): Promise<
     .order(
       'movement_at',
       {
-        ascending: false,
+        ascending:
+          false,
       },
     )
 
@@ -425,7 +621,8 @@ export async function getInventoryMovements(): Promise<
   }
 
   return (
-    data ?? []
+    data ??
+    []
   ).map(
     (movement) =>
       mapInventoryMovement(
@@ -452,7 +649,8 @@ export async function getInventoryMovementsByItemId(
     .order(
       'movement_at',
       {
-        ascending: false,
+        ascending:
+          false,
       },
     )
 
@@ -463,7 +661,8 @@ export async function getInventoryMovementsByItemId(
   }
 
   return (
-    data ?? []
+    data ??
+    []
   ).map(
     (movement) =>
       mapInventoryMovement(
@@ -489,7 +688,8 @@ export async function createInventoryMovement(
   input: CreateInventoryMovementInput,
 ): Promise<InventoryMovement> {
   if (
-    input.quantity <= 0
+    input.quantity <=
+    0
   ) {
     throw new Error(
       'A quantidade da movimentação deve ser maior que zero.',
@@ -583,28 +783,86 @@ export async function createInventoryMovement(
 }
 
 export async function getInventorySummary(): Promise<
-  InventoryItemSummary[]
+  InventoryOperationalSummary[]
 > {
   const [
     items,
     movements,
+    consumptionByItem,
   ] = await Promise.all([
     getInventoryItems(),
     getInventoryMovements(),
+    getDailyFeedingConsumptionByItem(),
   ])
+
+  const movementsByItem =
+    new Map<
+      string,
+      InventoryMovement[]
+    >()
+
+  for (
+    const movement
+    of movements
+  ) {
+    const itemMovements =
+      movementsByItem.get(
+        movement.itemId,
+      ) ??
+      []
+
+    itemMovements.push(
+      movement,
+    )
+
+    movementsByItem.set(
+      movement.itemId,
+      itemMovements,
+    )
+  }
 
   return items.map(
     (item) => {
       const itemMovements =
-        movements.filter(
-          (movement) =>
-            movement.itemId ===
-            item.id,
-        )
+        movementsByItem.get(
+          item.id,
+        ) ??
+        []
 
       const currentStock =
         calculateCurrentStock(
           itemMovements,
+        )
+
+      const isBelowMinimum =
+        isInventoryBelowMinimum(
+          item,
+          currentStock,
+        )
+
+      const dailyConsumption =
+        consumptionByItem.get(
+          item.id,
+        ) ??
+        0
+
+      const autonomyDays =
+        dailyConsumption >
+        0
+          ? Math.max(
+              0,
+              currentStock /
+                dailyConsumption,
+            )
+          : null
+
+      const needsReplenishment =
+        isBelowMinimum ||
+        (
+          autonomyDays !==
+            null &&
+          autonomyDays <=
+            INVENTORY_REPLENISHMENT_DAYS
         )
 
       return {
@@ -612,11 +870,13 @@ export async function getInventorySummary(): Promise<
 
         currentStock,
 
-        isBelowMinimum:
-          isInventoryBelowMinimum(
-            item,
-            currentStock,
-          ),
+        isBelowMinimum,
+
+        dailyConsumption,
+
+        autonomyDays,
+
+        needsReplenishment,
       }
     },
   )

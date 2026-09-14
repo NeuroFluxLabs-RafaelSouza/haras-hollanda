@@ -1,12 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
 import {
   CircleDollarSign,
   DoorOpen,
   Plus,
   Search,
   UserRound,
+  Utensils,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+
+import {
+  Link,
+} from 'react-router-dom'
 
 import type {
   HorseListItem,
@@ -18,15 +27,20 @@ import {
 
 import './HorsesPage.css'
 
-function formatMonthlyFee(value: number | null) {
+function formatMonthlyFee(
+  value: number | null,
+) {
   if (value === null) {
     return 'Não informada'
   }
 
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value)
+  return new Intl.NumberFormat(
+    'pt-BR',
+    {
+      style: 'currency',
+      currency: 'BRL',
+    },
+  ).format(value)
 }
 
 function getSexLabel(
@@ -37,33 +51,51 @@ function getSexLabel(
     : 'Fêmea'
 }
 
-function normalizeText(value: string) {
+function normalizeText(
+  value: string,
+) {
   return value
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
     .toLowerCase()
     .trim()
 }
 
 export function HorsesPage() {
-  const [horses, setHorses] = useState<
-    HorseListItem[]
-  >([])
+  const [
+    horses,
+    setHorses,
+  ] = useState<HorseListItem[]>(
+    [],
+  )
 
-  const [search, setSearch] = useState('')
+  const [
+    search,
+    setSearch,
+  ] = useState('')
 
-  const [loading, setLoading] =
-    useState(true)
+  const [
+    loading,
+    setLoading,
+  ] = useState(true)
 
-  const [error, setError] =
-    useState<string | null>(null)
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(
+    null,
+  )
 
   useEffect(() => {
     let isMounted = true
 
     async function loadHorses() {
       try {
-        const data = await getHorses()
+        const data =
+          await getHorses()
 
         if (isMounted) {
           setHorses(data)
@@ -93,30 +125,38 @@ export function HorsesPage() {
     }
   }, [])
 
-  const filteredHorses = useMemo(() => {
-    const normalizedSearch =
-      normalizeText(search)
+  const filteredHorses =
+    useMemo(() => {
+      const normalizedSearch =
+        normalizeText(search)
 
-    if (!normalizedSearch) {
-      return horses
-    }
+      if (!normalizedSearch) {
+        return horses
+      }
 
-    return horses.filter((horse) => {
-      const searchableContent = [
-        horse.name,
-        horse.breed ?? '',
-        horse.clientName,
-        horse.stallName ?? '',
-      ]
+      return horses.filter(
+        (horse) => {
+          const searchableContent = [
+            horse.name,
+            horse.breed ?? '',
+            horse.clientName,
+            horse.stallName ?? '',
+          ]
 
-      return searchableContent.some(
-        (value) =>
-          normalizeText(value).includes(
-            normalizedSearch,
-          ),
+          return searchableContent.some(
+            (value) =>
+              normalizeText(
+                value,
+              ).includes(
+                normalizedSearch,
+              ),
+          )
+        },
       )
-    })
-  }, [horses, search])
+    }, [
+      horses,
+      search,
+    ])
 
   const horseCountLabel =
     horses.length === 1
@@ -163,6 +203,18 @@ export function HorsesPage() {
               aria-label="Buscar cavalo"
             />
           </div>
+
+          <Link
+            className="horses-feeding-today-button"
+            to="/cavalos/alimentacao-hoje"
+          >
+            <Utensils
+              size={17}
+              strokeWidth={1.8}
+            />
+
+            Alimentação de hoje
+          </Link>
 
           <Link
             className="horses-add-button"
@@ -319,6 +371,20 @@ export function HorsesPage() {
                         </strong>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="horse-card__actions">
+                    <Link
+                      className="horse-card__feeding"
+                      to={`/cavalos/${horse.id}/alimentacao`}
+                    >
+                      <Utensils
+                        size={15}
+                        strokeWidth={1.8}
+                      />
+
+                      Plano alimentar
+                    </Link>
                   </div>
                 </article>
               ),

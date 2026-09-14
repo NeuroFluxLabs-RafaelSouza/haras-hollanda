@@ -10,6 +10,7 @@ import {
   ArrowDown,
   ArrowUp,
   Boxes,
+  Gauge,
   PackageSearch,
   Search,
 } from 'lucide-react'
@@ -21,12 +22,13 @@ import {
 import {
   INVENTORY_CATEGORY_LABELS,
   INVENTORY_UNIT_LABELS,
-  type InventoryItemSummary,
   type InventoryUnit,
 } from '../../domain/inventory.ts'
 
 import {
+  INVENTORY_REPLENISHMENT_DAYS,
   getInventorySummary,
+  type InventoryOperationalSummary,
 } from './inventoryService.ts'
 
 import './InventoryPage.css'
@@ -51,6 +53,17 @@ function formatQuantity(
     'pt-BR',
     {
       maximumFractionDigits: 3,
+    },
+  ).format(value)
+}
+
+function formatAutonomy(
+  value: number,
+) {
+  return new Intl.NumberFormat(
+    'pt-BR',
+    {
+      maximumFractionDigits: 1,
     },
   ).format(value)
 }
@@ -82,13 +95,54 @@ function getUnitLabel(
   ]
 }
 
+function getInventoryStatus(
+  summary: InventoryOperationalSummary,
+) {
+  if (
+    summary.currentStock <= 0
+  ) {
+    return {
+      label: 'Sem estoque',
+      className:
+        'inventory-card__status--critical',
+    }
+  }
+
+  if (
+    summary.autonomyDays !== null &&
+    summary.autonomyDays <= 3
+  ) {
+    return {
+      label: 'Crítico',
+      className:
+        'inventory-card__status--critical',
+    }
+  }
+
+  if (
+    summary.needsReplenishment
+  ) {
+    return {
+      label: 'Repor em breve',
+      className:
+        'inventory-card__status--warning',
+    }
+  }
+
+  return {
+    label: 'Normal',
+    className:
+      'inventory-card__status--ok',
+  }
+}
+
 export function InventoryPage() {
   const [
     items,
     setItems,
-  ] = useState<InventoryItemSummary[]>(
-    [],
-  )
+  ] = useState<
+    InventoryOperationalSummary[]
+  >([])
 
   const [
     search,
@@ -153,12 +207,12 @@ export function InventoryPage() {
       [items],
     )
 
-  const lowStockItems =
+  const replenishmentItems =
     useMemo(
       () =>
         activeItems.filter(
-          (item) =>
-            item.isBelowMinimum,
+          (summary) =>
+            summary.needsReplenishment,
         ),
       [activeItems],
     )
@@ -210,8 +264,8 @@ export function InventoryPage() {
           </h1>
 
           <p className="page-header__description">
-            Acompanhe os produtos disponíveis e registre movimentações sem
-            repetir cadastros.
+            Veja o que está disponível e antecipe reposições sem precisar
+            fazer contas manualmente.
           </p>
         </div>
 
@@ -266,13 +320,13 @@ export function InventoryPage() {
 
           <div>
             <span>
-              Estoque baixo
+              Reposição em breve
             </span>
 
             <strong>
               {loading
                 ? '...'
-                : lowStockItems.length}
+                : replenishmentItems.length}
             </strong>
           </div>
         </article>
@@ -350,146 +404,201 @@ export function InventoryPage() {
         filteredItems.length > 0 && (
           <div className="inventory-grid">
             {filteredItems.map(
-              ({
-                item,
-                currentStock,
-                isBelowMinimum,
-              }) => (
-                <article
-                  className={`inventory-card ${
-                    isBelowMinimum
-                      ? 'inventory-card--warning'
-                      : ''
-                  }`}
-                  key={item.id}
-                >
-                  <div className="inventory-card__header">
-                    <div>
-                      <span className="inventory-card__category">
-                        {
-                          INVENTORY_CATEGORY_LABELS[
-                            item.category
-                          ]
-                        }
-                      </span>
+              (summary) => {
+                const {
+                  item,
+                  currentStock,
+                  dailyConsumption,
+                  autonomyDays,
+                  needsReplenishment,
+                } = summary
 
-                      <h2>
-                        {item.name}
-                      </h2>
-                    </div>
+                const status =
+                  getInventoryStatus(
+                    summary,
+                  )
 
-                    <span
-                      className={`inventory-card__status ${
-                        isBelowMinimum
-                          ? 'inventory-card__status--warning'
-                          : 'inventory-card__status--ok'
-                      }`}
-                    >
-                      {isBelowMinimum
-                        ? 'Estoque baixo'
-                        : 'Normal'}
-                    </span>
-                  </div>
+                const hasConsumptionForecast =
+                  dailyConsumption > 0 &&
+                  autonomyDays !== null
 
-                  <div className="inventory-card__stock">
-                    <div>
-                      <span>
-                        Estoque atual
-                      </span>
+                return (
+                  <article
+                    className={`inventory-card ${
+                      needsReplenishment
+                        ? 'inventory-card--warning'
+                        : ''
+                    }`}
+                    key={item.id}
+                  >
+                    <div className="inventory-card__header">
+                      <div>
+                        <span className="inventory-card__category">
+                          {
+                            INVENTORY_CATEGORY_LABELS[
+                              item.category
+                            ]
+                          }
+                        </span>
 
-                      <strong>
-                        {formatQuantity(
-                          currentStock,
-                        )}{' '}
-                        {getUnitLabel(
-                          item.unit,
-                          currentStock,
-                        )}
-                      </strong>
-                    </div>
+                        <h2>
+                          {item.name}
+                        </h2>
+                      </div>
 
-                    <div>
-                      <span>
-                        Estoque mínimo
-                      </span>
-
-                      <strong>
-                        {formatQuantity(
-                          item.minimumStock,
-                        )}{' '}
-                        {getUnitLabel(
-                          item.unit,
-                          item.minimumStock,
-                        )}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {item.purchaseUnit &&
-                    item.packageSize && (
-                    <div className="inventory-card__package">
-                      <Boxes
-                        size={15}
-                        strokeWidth={1.8}
-                      />
-
-                      <span>
-                        Compra em{' '}
-                        {getUnitLabel(
-                          item.purchaseUnit,
-                          2,
-                        )}
-                        {' · '}
-                        {formatQuantity(
-                          item.packageSize,
-                        )}{' '}
-                        {
-                          INVENTORY_UNIT_LABELS[
-                            item.unit
-                          ]
-                        }{' '}
-                        por{' '}
-                        {
-                          INVENTORY_UNIT_LABELS[
-                            item.purchaseUnit
-                          ]
-                        }
+                      <span
+                        className={`inventory-card__status ${status.className}`}
+                      >
+                        {status.label}
                       </span>
                     </div>
-                  )}
 
-                  {isBelowMinimum && (
-                    <div className="inventory-card__alert">
-                      <AlertTriangle
-                        size={15}
-                        strokeWidth={1.8}
-                      />
+                    <div className="inventory-card__stock">
+                      <div>
+                        <span>
+                          Estoque atual
+                        </span>
 
-                      <span>
-                        Reposição recomendada.
-                      </span>
+                        <strong>
+                          {formatQuantity(
+                            currentStock,
+                          )}{' '}
+                          {getUnitLabel(
+                            item.unit,
+                            currentStock,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Estoque mínimo
+                        </span>
+
+                        <strong>
+                          {formatQuantity(
+                            item.minimumStock,
+                          )}{' '}
+                          {getUnitLabel(
+                            item.unit,
+                            item.minimumStock,
+                          )}
+                        </strong>
+                      </div>
                     </div>
-                  )}
 
-                  <div className="inventory-card__actions">
-                    <Link
-                      className="inventory-card__movement inventory-card__movement--entry"
-                      to={`/estoque/compra?product=${item.id}`}
-                    >
-                      <ArrowDown size={15} />
-                      Registrar compra
-                    </Link>
+                    {hasConsumptionForecast && (
+                      <div
+                        className={`inventory-card__forecast ${
+                          autonomyDays <=
+                          INVENTORY_REPLENISHMENT_DAYS
+                            ? 'inventory-card__forecast--warning'
+                            : ''
+                        }`}
+                      >
+                        <Gauge
+                          size={16}
+                          strokeWidth={1.8}
+                        />
 
-                    <Link
-                      className="inventory-card__movement inventory-card__movement--exit"
-                      to={`/estoque/${item.id}/movimentar?type=exit`}
-                    >
-                      <ArrowUp size={15} />
-                      Saída manual
-                    </Link>
-                  </div>
-                </article>
-              ),
+                        <div>
+                          <span>
+                            Consumo planejado
+                          </span>
+
+                          <strong>
+                            {formatQuantity(
+                              dailyConsumption,
+                            )}{' '}
+                            {
+                              INVENTORY_UNIT_LABELS[
+                                item.unit
+                              ]
+                            }
+                            /dia
+                            {' · '}
+                            aproximadamente{' '}
+                            {formatAutonomy(
+                              autonomyDays,
+                            )}{' '}
+                            dias de autonomia
+                          </strong>
+                        </div>
+                      </div>
+                    )}
+
+                    {item.purchaseUnit &&
+                      item.packageSize && (
+                        <div className="inventory-card__package">
+                          <Boxes
+                            size={15}
+                            strokeWidth={1.8}
+                          />
+
+                          <span>
+                            Compra em{' '}
+                            {getUnitLabel(
+                              item.purchaseUnit,
+                              2,
+                            )}
+                            {' · '}
+                            {formatQuantity(
+                              item.packageSize,
+                            )}{' '}
+                            {
+                              INVENTORY_UNIT_LABELS[
+                                item.unit
+                              ]
+                            }{' '}
+                            por{' '}
+                            {
+                              INVENTORY_UNIT_LABELS[
+                                item.purchaseUnit
+                              ]
+                            }
+                          </span>
+                        </div>
+                      )}
+
+                    {needsReplenishment && (
+                      <div className="inventory-card__alert">
+                        <AlertTriangle
+                          size={15}
+                          strokeWidth={1.8}
+                        />
+
+                        <span>
+                          {hasConsumptionForecast &&
+                          autonomyDays <=
+                            INVENTORY_REPLENISHMENT_DAYS
+                            ? `Planeje a reposição. O estoque atual cobre aproximadamente ${formatAutonomy(
+                                autonomyDays,
+                              )} dias.`
+                            : 'Reposição recomendada.'}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="inventory-card__actions">
+                      <Link
+                        className="inventory-card__movement inventory-card__movement--entry"
+                        to={`/estoque/compra?product=${item.id}`}
+                      >
+                        <ArrowDown size={15} />
+                        Registrar compra
+                      </Link>
+
+                      <Link
+                        className="inventory-card__movement inventory-card__movement--exit"
+                        to={`/estoque/${item.id}/movimentar?type=exit`}
+                      >
+                        <ArrowUp size={15} />
+                        Saída manual
+                      </Link>
+                    </div>
+                  </article>
+                )
+              },
             )}
           </div>
         )}
