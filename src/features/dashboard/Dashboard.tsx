@@ -1,15 +1,26 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 
 import {
   AlertTriangle,
+  ArrowRight,
+  Boxes,
+  CalendarDays,
   CheckCircle2,
   Clock,
+  PawPrint,
 } from 'lucide-react'
 
-import { Link } from 'react-router-dom'
+import {
+  Link,
+} from 'react-router-dom'
+
+import type {
+  DailyFeedingRoutineItem,
+} from '../../domain/feeding.ts'
 
 import type {
   StallMaintenanceAlert,
@@ -21,44 +32,44 @@ import {
 } from '../agenda/appointmentsService.ts'
 
 import {
-  getHorses,
-  type HorseListItem,
-} from '../horses/horsesService.ts'
+  getDailyFeedingRoutine,
+} from '../feeding/feedingService.ts'
+
+import {
+  getInventorySummary,
+  type InventoryOperationalSummary,
+} from '../inventory/inventoryService.ts'
 
 import {
   getStallMaintenanceAlerts,
-  getStalls,
 } from '../stalls/stallsService.ts'
 
 import './Dashboard.css'
 
-type DashboardStats = {
-  activeHorses: number
-  availableStalls: number
-  operationalStalls: number
-}
+function getTodayDateKey() {
+  const today =
+    new Date()
 
-const initialStats: DashboardStats = {
-  activeHorses: 0,
-  availableStalls: 0,
-  operationalStalls: 0,
-}
+  const year =
+    today.getFullYear()
 
-function getOccupiedStallIds(
-  horses: HorseListItem[],
-) {
-  return new Set(
-    horses
-      .filter(
-        (horse) =>
-          horse.active &&
-          horse.stallId !== null,
-      )
-      .map(
-        (horse) =>
-          horse.stallId as string,
-      ),
-  )
+  const month =
+    String(
+      today.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    )
+
+  const day =
+    String(
+      today.getDate(),
+    ).padStart(
+      2,
+      '0',
+    )
+
+  return `${year}-${month}-${day}`
 }
 
 function formatAppointmentTime(
@@ -70,40 +81,137 @@ function formatAppointmentTime(
       hour: '2-digit',
       minute: '2-digit',
     },
-  ).format(new Date(scheduledAt))
+  ).format(
+    new Date(
+      scheduledAt,
+    ),
+  )
 }
 
 function getAppointmentDescription(
   appointment: AppointmentListItem,
 ) {
-  if (appointment.horseName) {
+  if (
+    appointment.horseName
+  ) {
     return appointment.horseName
   }
 
   return 'Cavalo não identificado'
 }
 
+function formatAutonomyDays(
+  value: number,
+) {
+  return new Intl.NumberFormat(
+    'pt-BR',
+    {
+      maximumFractionDigits: 1,
+    },
+  ).format(
+    value,
+  )
+}
+
+function getInventoryAlertLevel(
+  summary: InventoryOperationalSummary,
+) {
+  if (
+    summary.currentStock <= 0
+  ) {
+    return 'danger'
+  }
+
+  if (
+    summary.autonomyDays !== null &&
+    summary.autonomyDays <= 3
+  ) {
+    return 'danger'
+  }
+
+  return 'warning'
+}
+
+function getInventoryAlertDetail(
+  summary: InventoryOperationalSummary,
+) {
+  if (
+    summary.currentStock <= 0
+  ) {
+    return 'Produto sem estoque disponível. Reposição necessária.'
+  }
+
+  if (
+    summary.autonomyDays !== null
+  ) {
+    return `O estoque atual cobre aproximadamente ${formatAutonomyDays(
+      summary.autonomyDays,
+    )} dias de consumo planejado.`
+  }
+
+  if (
+    summary.isBelowMinimum
+  ) {
+    return 'O estoque atual atingiu ou ficou abaixo do mínimo cadastrado.'
+  }
+
+  return 'Reposição recomendada.'
+}
+
+function getInventoryPriority(
+  summary: InventoryOperationalSummary,
+) {
+  if (
+    summary.currentStock <= 0
+  ) {
+    return 0
+  }
+
+  if (
+    summary.autonomyDays !== null &&
+    summary.autonomyDays <= 3
+  ) {
+    return 1
+  }
+
+  if (
+    summary.autonomyDays !== null
+  ) {
+    return 2 +
+      summary.autonomyDays / 100
+  }
+
+  return 3
+}
+
 export function Dashboard() {
   const [
-    stats,
-    setStats,
-  ] = useState<DashboardStats>(
-    initialStats,
-  )
-
-  const [
-    maintenanceAlerts,
-    setMaintenanceAlerts,
-  ] = useState<StallMaintenanceAlert[]>(
-    [],
-  )
+    feedingRoutine,
+    setFeedingRoutine,
+  ] = useState<
+    DailyFeedingRoutineItem[]
+  >([])
 
   const [
     todayAppointments,
     setTodayAppointments,
-  ] = useState<AppointmentListItem[]>(
-    [],
-  )
+  ] = useState<
+    AppointmentListItem[]
+  >([])
+
+  const [
+    inventorySummary,
+    setInventorySummary,
+  ] = useState<
+    InventoryOperationalSummary[]
+  >([])
+
+  const [
+    maintenanceAlerts,
+    setMaintenanceAlerts,
+  ] = useState<
+    StallMaintenanceAlert[]
+  >([])
 
   const [
     loading,
@@ -113,87 +221,79 @@ export function Dashboard() {
   const [
     error,
     setError,
-  ] = useState<string | null>(null)
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadDashboard() {
       try {
+        const today =
+          getTodayDateKey()
+
         const [
-          horses,
-          stalls,
-          alerts,
+          feeding,
           appointments,
+          inventory,
+          maintenance,
         ] = await Promise.all([
-          getHorses(),
-          getStalls(),
-          getStallMaintenanceAlerts(),
+          getDailyFeedingRoutine(
+            today,
+          ),
+
           getTodayAppointments(),
+
+          getInventorySummary(),
+
+          getStallMaintenanceAlerts(),
         ])
 
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
-        const activeHorses =
-          horses.filter(
-            (horse) =>
-              horse.active,
-          )
-
-        const occupiedStallIds =
-          getOccupiedStallIds(
-            activeHorses,
-          )
-
-        const operationalStalls =
-          stalls.filter(
-            (stall) =>
-              stall.status ===
-              'operational',
-          )
-
-        const availableStalls =
-          operationalStalls.filter(
-            (stall) =>
-              !occupiedStallIds.has(
-                stall.id,
-              ),
-          )
-
-        setStats({
-          activeHorses:
-            activeHorses.length,
-
-          availableStalls:
-            availableStalls.length,
-
-          operationalStalls:
-            operationalStalls.length,
-        })
-
-        setMaintenanceAlerts(
-          alerts,
+        setFeedingRoutine(
+          feeding,
         )
 
         setTodayAppointments(
           appointments,
         )
+
+        setInventorySummary(
+          inventory,
+        )
+
+        setMaintenanceAlerts(
+          maintenance,
+        )
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
         const message =
           error instanceof Error
             ? error.message
-            : 'Não foi possível carregar o dashboard.'
+            : 'Não foi possível carregar o painel.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoading(false)
+        if (
+          isMounted
+        ) {
+          setLoading(
+            false,
+          )
         }
       }
     }
@@ -201,61 +301,74 @@ export function Dashboard() {
     loadDashboard()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
   }, [])
 
-  const metrics = [
-    {
-      label: 'Cavalos ativos',
+  const pendingFeedings =
+    useMemo(
+      () =>
+        feedingRoutine.filter(
+          (item) =>
+            !item.confirmed,
+        ),
+      [
+        feedingRoutine,
+      ],
+    )
 
-      value: loading
-        ? '...'
-        : String(
-            stats.activeHorses,
+  const completedFeedings =
+    feedingRoutine.length -
+    pendingFeedings.length
+
+  const pendingAppointments =
+    useMemo(
+      () =>
+        todayAppointments.filter(
+          (appointment) =>
+            appointment.status !==
+            'completed',
+        ),
+      [
+        todayAppointments,
+      ],
+    )
+
+  const replenishmentItems =
+    useMemo(
+      () =>
+        inventorySummary
+          .filter(
+            (summary) =>
+              summary.item.active &&
+              summary.needsReplenishment,
+          )
+          .sort(
+            (
+              first,
+              second,
+            ) =>
+              getInventoryPriority(
+                first,
+              ) -
+              getInventoryPriority(
+                second,
+              ),
           ),
+      [
+        inventorySummary,
+      ],
+    )
 
-      detail:
-        stats.activeHorses === 1
-          ? '1 animal acompanhado'
-          : `${stats.activeHorses} animais acompanhados`,
-    },
-
-    {
-      label: 'Baias livres',
-
-      value: loading
-        ? '...'
-        : String(
-            stats.availableStalls,
-          ),
-
-      detail:
-        loading
-          ? 'Carregando...'
-          : `das ${stats.operationalStalls} operacionais`,
-    },
-
-    {
-      label: 'Alertas',
-
-      value: loading
-        ? '...'
-        : String(
-            maintenanceAlerts.length,
-          ),
-
-      detail:
-        maintenanceAlerts.length === 1
-          ? 'Precisa de atenção'
-          : 'Precisam de atenção',
-    },
-  ]
+  const attentionCount =
+    replenishmentItems.length +
+    maintenanceAlerts.length
 
   return (
     <section className="dashboard">
       {error && (
-        <div className="dashboard-alert dashboard-alert--danger">
+        <div className="dashboard-load-error">
           <AlertTriangle
             size={18}
             strokeWidth={1.8}
@@ -273,91 +386,317 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="dashboard-metrics">
-        {metrics.map(
-          (metric) => (
-            <article
-              className="metric-card"
-              key={metric.label}
-            >
-              <span className="metric-card__label">
-                {metric.label}
-              </span>
-
-              <strong className="metric-card__value">
-                {metric.value}
-              </strong>
-
-              <span className="metric-card__detail">
-                {metric.detail}
-              </span>
-            </article>
-          ),
-        )}
-      </div>
-
-      <div className="dashboard-alerts">
-        <div className="dashboard-alerts__header">
+      <section className="dashboard-priorities">
+        <div className="dashboard-section-heading">
           <div>
-            <span className="dashboard-section__eyebrow">
+            <span className="dashboard-section-heading__eyebrow">
+              Hoje no haras
+            </span>
+
+            <h2>
+              O que precisa da sua atenção
+            </h2>
+          </div>
+        </div>
+
+        <div className="dashboard-operation-grid">
+          <Link
+            className={`dashboard-operation-card ${
+              !loading &&
+              pendingFeedings.length >
+                0
+                ? 'dashboard-operation-card--attention'
+                : ''
+            }`}
+            to="/cavalos/alimentacao-hoje"
+          >
+            <div className="dashboard-operation-card__top">
+              <div className="dashboard-operation-card__icon">
+                <PawPrint
+                  size={20}
+                  strokeWidth={1.8}
+                />
+              </div>
+
+              <ArrowRight
+                className="dashboard-operation-card__arrow"
+                size={17}
+              />
+            </div>
+
+            <span className="dashboard-operation-card__label">
+              Alimentação
+            </span>
+
+            <strong className="dashboard-operation-card__value">
+              {loading
+                ? '...'
+                : pendingFeedings.length}
+            </strong>
+
+            <span className="dashboard-operation-card__status">
+              {loading
+                ? 'Carregando rotina...'
+                : pendingFeedings.length ===
+                    0
+                  ? feedingRoutine.length ===
+                    0
+                    ? 'Nenhuma alimentação planejada'
+                    : 'Tudo confirmado'
+                  : pendingFeedings.length ===
+                      1
+                    ? '1 alimentação pendente'
+                    : `${pendingFeedings.length} alimentações pendentes`}
+            </span>
+
+            {!loading &&
+              feedingRoutine.length >
+                0 && (
+                <span className="dashboard-operation-card__detail">
+                  {completedFeedings} de{' '}
+                  {feedingRoutine.length}{' '}
+                  concluídas hoje
+                </span>
+              )}
+          </Link>
+
+          <Link
+            className={`dashboard-operation-card ${
+              !loading &&
+              pendingAppointments.length >
+                0
+                ? 'dashboard-operation-card--attention'
+                : ''
+            }`}
+            to="/agenda"
+          >
+            <div className="dashboard-operation-card__top">
+              <div className="dashboard-operation-card__icon">
+                <CalendarDays
+                  size={20}
+                  strokeWidth={1.8}
+                />
+              </div>
+
+              <ArrowRight
+                className="dashboard-operation-card__arrow"
+                size={17}
+              />
+            </div>
+
+            <span className="dashboard-operation-card__label">
+              Agenda
+            </span>
+
+            <strong className="dashboard-operation-card__value">
+              {loading
+                ? '...'
+                : pendingAppointments.length}
+            </strong>
+
+            <span className="dashboard-operation-card__status">
+              {loading
+                ? 'Carregando agenda...'
+                : pendingAppointments.length ===
+                    0
+                  ? 'Nenhum compromisso pendente'
+                  : pendingAppointments.length ===
+                      1
+                    ? '1 compromisso pendente'
+                    : `${pendingAppointments.length} compromissos pendentes`}
+            </span>
+
+            {!loading && (
+              <span className="dashboard-operation-card__detail">
+                {todayAppointments.length ===
+                0
+                  ? 'Agenda livre hoje'
+                  : todayAppointments.length ===
+                      1
+                    ? '1 compromisso no dia'
+                    : `${todayAppointments.length} compromissos no dia`}
+              </span>
+            )}
+          </Link>
+
+          <Link
+            className={`dashboard-operation-card ${
+              !loading &&
+              replenishmentItems.length >
+                0
+                ? 'dashboard-operation-card--attention'
+                : ''
+            }`}
+            to="/estoque"
+          >
+            <div className="dashboard-operation-card__top">
+              <div className="dashboard-operation-card__icon">
+                <Boxes
+                  size={20}
+                  strokeWidth={1.8}
+                />
+              </div>
+
+              <ArrowRight
+                className="dashboard-operation-card__arrow"
+                size={17}
+              />
+            </div>
+
+            <span className="dashboard-operation-card__label">
+              Estoque
+            </span>
+
+            <strong className="dashboard-operation-card__value">
+              {loading
+                ? '...'
+                : replenishmentItems.length}
+            </strong>
+
+            <span className="dashboard-operation-card__status">
+              {loading
+                ? 'Calculando autonomia...'
+                : replenishmentItems.length ===
+                    0
+                  ? 'Estoque sob controle'
+                  : replenishmentItems.length ===
+                      1
+                    ? '1 produto para repor'
+                    : `${replenishmentItems.length} produtos para repor`}
+            </span>
+
+            {!loading && (
+              <span className="dashboard-operation-card__detail">
+                {replenishmentItems.length ===
+                0
+                  ? 'Nenhuma compra urgente'
+                  : 'Planeje a reposição antes de faltar'}
+              </span>
+            )}
+          </Link>
+        </div>
+      </section>
+
+      <section className="dashboard-attention">
+        <div className="dashboard-section-heading">
+          <div>
+            <span className="dashboard-section-heading__eyebrow">
               Atenção
             </span>
 
             <h2>
-              Alertas
+              Pontos importantes
             </h2>
           </div>
 
-          <span className="dashboard-alerts__count">
+          <span
+            className={`dashboard-attention__count ${
+              !loading &&
+              attentionCount ===
+                0
+                ? 'dashboard-attention__count--clear'
+                : ''
+            }`}
+          >
             {loading
               ? '...'
-              : maintenanceAlerts.length}
+              : attentionCount}
           </span>
         </div>
 
         {loading && (
-          <div className="dashboard-alert">
-            <div>
-              <strong>
-                Carregando alertas...
-              </strong>
-            </div>
-          </div>
-        )}
-
-        {!loading &&
-          !error &&
-          maintenanceAlerts.length ===
-            0 && (
-            <div className="dashboard-alert dashboard-alert--empty">
-              <CheckCircle2
+          <div className="dashboard-attention-list">
+            <div className="dashboard-alert">
+              <Clock
                 size={18}
                 strokeWidth={1.8}
               />
 
               <div>
                 <strong>
-                  Nenhum alerta operacional
+                  Verificando operação...
                 </strong>
 
                 <span>
-                  Não há manutenções vencidas ou próximas do vencimento.
+                  Estamos reunindo os pontos que merecem atenção hoje.
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading &&
+          !error &&
+          attentionCount ===
+            0 && (
+            <div className="dashboard-attention-list">
+              <div className="dashboard-alert dashboard-alert--empty">
+                <CheckCircle2
+                  size={18}
+                  strokeWidth={1.8}
+                />
+
+                <div>
+                  <strong>
+                    Tudo sob controle
+                  </strong>
+
+                  <span>
+                    Não há alertas de estoque ou manutenção neste momento.
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
         {!loading &&
-          maintenanceAlerts.length >
+          attentionCount >
             0 && (
-            <div className="dashboard-alerts__list">
+            <div className="dashboard-attention-list">
+              {replenishmentItems.map(
+                (summary) => {
+                  const level =
+                    getInventoryAlertLevel(
+                      summary,
+                    )
+
+                  return (
+                    <Link
+                      className={`dashboard-alert dashboard-alert--${level} dashboard-alert--clickable`}
+                      key={`inventory-${summary.item.id}`}
+                      to="/estoque"
+                    >
+                      <AlertTriangle
+                        size={18}
+                        strokeWidth={1.8}
+                      />
+
+                      <div>
+                        <strong>
+                          {summary.item.name}
+                        </strong>
+
+                        <span>
+                          {getInventoryAlertDetail(
+                            summary,
+                          )}
+                        </span>
+                      </div>
+
+                      <span className="dashboard-alert__source">
+                        Estoque
+                      </span>
+                    </Link>
+                  )
+                },
+              )}
+
               {maintenanceAlerts.map(
                 (alert) => (
-                  <div
-                    className={`dashboard-alert dashboard-alert--${alert.urgency}`}
-                    key={
-                      alert.stallId
-                    }
+                  <Link
+                    className={`dashboard-alert dashboard-alert--${alert.urgency} dashboard-alert--clickable`}
+                    key={`stall-${alert.stallId}`}
+                    to="/baias"
                   >
                     <AlertTriangle
                       size={18}
@@ -366,29 +705,29 @@ export function Dashboard() {
 
                     <div>
                       <strong>
-                        {
-                          alert.message
-                        }
+                        {alert.message}
                       </strong>
 
                       <span>
-                        {
-                          alert.detail
-                        }
+                        {alert.detail}
                       </span>
                     </div>
-                  </div>
+
+                    <span className="dashboard-alert__source">
+                      Baias
+                    </span>
+                  </Link>
                 ),
               )}
             </div>
           )}
-      </div>
+      </section>
 
-      <div className="dashboard-section">
-        <div className="dashboard-section__header">
+      <section className="dashboard-agenda">
+        <div className="dashboard-section-heading">
           <div>
-            <span className="dashboard-section__eyebrow">
-              Hoje
+            <span className="dashboard-section-heading__eyebrow">
+              Rotina de hoje
             </span>
 
             <h2>
@@ -397,16 +736,20 @@ export function Dashboard() {
           </div>
 
           <Link
-            className="dashboard-section__action"
+            className="dashboard-section-heading__action"
             to="/agenda"
           >
             Ver agenda
+
+            <ArrowRight
+              size={14}
+            />
           </Link>
         </div>
 
         {loading && (
           <div className="appointments">
-            <div className="appointment">
+            <div className="appointment appointment--simple">
               <div className="appointment__content">
                 <strong>
                   Carregando compromissos...
@@ -420,7 +763,7 @@ export function Dashboard() {
           todayAppointments.length ===
             0 && (
             <div className="appointments">
-              <div className="appointment">
+              <div className="appointment appointment--empty">
                 <div className="appointment__icon appointment__icon--completed">
                   <CheckCircle2
                     size={18}
@@ -484,9 +827,7 @@ export function Dashboard() {
 
                     <div className="appointment__content">
                       <strong>
-                        {
-                          appointment.title
-                        }
+                        {appointment.title}
                       </strong>
 
                       <span>
@@ -514,7 +855,7 @@ export function Dashboard() {
               )}
             </div>
           )}
-      </div>
+      </section>
     </section>
   )
 }
