@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
 } from 'react'
 
@@ -11,6 +10,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  WalletCards,
 } from 'lucide-react'
 
 import {
@@ -39,6 +39,11 @@ import {
 } from '../feeding/feedingService.ts'
 
 import {
+  getDashboardFinancialAttention,
+  type DashboardFinancialAttention,
+} from '../finance/financeService.ts'
+
+import {
   getInventorySummary,
   type InventoryOperationalSummary,
 } from '../inventory/inventoryService.ts'
@@ -48,6 +53,20 @@ import {
 } from '../stalls/stallsService.ts'
 
 import './Dashboard.css'
+
+type FinancialAttentionLoadResult = {
+  data: DashboardFinancialAttention | null
+  error: string | null
+}
+
+const emptyFinancialAttention: DashboardFinancialAttention = {
+  upcomingCharges: [],
+  dueTodayCharges: [],
+  overdueCharges: [],
+  upcomingAmount: 0,
+  dueTodayAmount: 0,
+  overdueAmount: 0,
+}
 
 function getTodayDateKey() {
   const today =
@@ -110,6 +129,20 @@ function formatAutonomyDays(
     'pt-BR',
     {
       maximumFractionDigits: 1,
+    },
+  ).format(
+    value,
+  )
+}
+
+function formatCurrency(
+  value: number,
+) {
+  return new Intl.NumberFormat(
+    'pt-BR',
+    {
+      style: 'currency',
+      currency: 'BRL',
     },
   ).format(
     value,
@@ -187,6 +220,28 @@ function getInventoryPriority(
   return 3
 }
 
+async function loadFinancialAttentionSafely(): Promise<FinancialAttentionLoadResult> {
+  try {
+    const data =
+      await getDashboardFinancialAttention()
+
+    return {
+      data,
+      error: null,
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Não foi possível consultar as pendências financeiras.'
+
+    return {
+      data: null,
+      error: message,
+    }
+  }
+}
+
 export function Dashboard() {
   const [
     feedingRoutine,
@@ -217,6 +272,13 @@ export function Dashboard() {
   >([])
 
   const [
+    financialAttention,
+    setFinancialAttention,
+  ] = useState<DashboardFinancialAttention>(
+    emptyFinancialAttention,
+  )
+
+  const [
     loading,
     setLoading,
   ] = useState(true)
@@ -224,6 +286,13 @@ export function Dashboard() {
   const [
     error,
     setError,
+  ] = useState<
+    string | null
+  >(null)
+
+  const [
+    financialError,
+    setFinancialError,
   ] = useState<
     string | null
   >(null)
@@ -242,6 +311,7 @@ export function Dashboard() {
           appointments,
           inventory,
           maintenance,
+          financeResult,
         ] = await Promise.all([
           getDailyFeedingRoutine(
             today,
@@ -252,6 +322,8 @@ export function Dashboard() {
           getInventorySummary(),
 
           getStallMaintenanceAlerts(),
+
+          loadFinancialAttentionSafely(),
         ])
 
         if (
@@ -275,6 +347,18 @@ export function Dashboard() {
         setMaintenanceAlerts(
           maintenance,
         )
+
+        setFinancialError(
+          financeResult.error,
+        )
+
+        if (
+          financeResult.data
+        ) {
+          setFinancialAttention(
+            financeResult.data,
+          )
+        }
       } catch (error) {
         if (
           !isMounted
@@ -310,15 +394,9 @@ export function Dashboard() {
   }, [])
 
   const pendingFeedings =
-    useMemo(
-      () =>
-        feedingRoutine.filter(
-          (item) =>
-            !item.confirmed,
-        ),
-      [
-        feedingRoutine,
-      ],
+    feedingRoutine.filter(
+      (item) =>
+        !item.confirmed,
     )
 
   const completedFeedings =
@@ -326,47 +404,47 @@ export function Dashboard() {
     pendingFeedings.length
 
   const pendingAppointments =
-    useMemo(
-      () =>
-        todayAppointments.filter(
-          (appointment) =>
-            appointment.status !==
-            'completed',
-        ),
-      [
-        todayAppointments,
-      ],
+    todayAppointments.filter(
+      (appointment) =>
+        appointment.status !==
+        'completed',
     )
 
   const replenishmentItems =
-    useMemo(
-      () =>
-        inventorySummary
-          .filter(
-            (summary) =>
-              summary.item.active &&
-              summary.needsReplenishment,
-          )
-          .sort(
-            (
-              first,
-              second,
-            ) =>
-              getInventoryPriority(
-                first,
-              ) -
-              getInventoryPriority(
-                second,
-              ),
+    inventorySummary
+      .filter(
+        (summary) =>
+          summary.item.active &&
+          summary.needsReplenishment,
+      )
+      .sort(
+        (
+          first,
+          second,
+        ) =>
+          getInventoryPriority(
+            first,
+          ) -
+          getInventoryPriority(
+            second,
           ),
-      [
-        inventorySummary,
-      ],
-    )
+      )
+
+  const financialAttentionCount =
+    financialAttention.upcomingCharges.length +
+    financialAttention.dueTodayCharges.length +
+    financialAttention.overdueCharges.length
 
   const attentionCount =
+    financialAttentionCount +
     replenishmentItems.length +
     maintenanceAlerts.length
+
+  const hasAttentionContent =
+    attentionCount >
+      0 ||
+    financialError !==
+      null
 
   return (
     <section className="dashboard">
@@ -596,14 +674,17 @@ export function Dashboard() {
             className={`dashboard-attention__count ${
               !loading &&
               attentionCount ===
-                0
+                0 &&
+              !financialError
                 ? 'dashboard-attention__count--clear'
                 : ''
             }`}
           >
             {loading
               ? '...'
-              : attentionCount}
+              : financialError
+                ? '!'
+                : attentionCount}
           </span>
         </div>
 
@@ -630,8 +711,7 @@ export function Dashboard() {
 
         {!loading &&
           !error &&
-          attentionCount ===
-            0 && (
+          !hasAttentionContent && (
             <div className="dashboard-attention-list">
               <div className="dashboard-alert dashboard-alert--empty">
                 <CheckCircle2
@@ -645,7 +725,8 @@ export function Dashboard() {
                   </strong>
 
                   <span>
-                    Não há alertas de estoque ou manutenção neste momento.
+                    Não há alertas financeiros, de estoque ou de manutenção
+                    neste momento.
                   </span>
                 </div>
               </div>
@@ -653,9 +734,134 @@ export function Dashboard() {
           )}
 
         {!loading &&
-          attentionCount >
-            0 && (
+          hasAttentionContent && (
             <div className="dashboard-attention-list">
+              {financialError && (
+                <div className="dashboard-alert dashboard-alert--warning">
+                  <AlertTriangle
+                    size={18}
+                    strokeWidth={1.8}
+                  />
+
+                  <div>
+                    <strong>
+                      Financeiro não pôde ser atualizado
+                    </strong>
+
+                    <span>
+                      {financialError}
+                    </span>
+                  </div>
+
+                  <span className="dashboard-alert__source">
+                    Financeiro
+                  </span>
+                </div>
+              )}
+
+              {financialAttention.overdueCharges.length >
+                0 && (
+                <Link
+                  className="dashboard-alert dashboard-alert--danger dashboard-alert--finance dashboard-alert--clickable"
+                  to="/financeiro"
+                >
+                  <WalletCards
+                    size={18}
+                    strokeWidth={1.8}
+                  />
+
+                  <div>
+                    <strong>
+                      Mensalidades em atraso
+                    </strong>
+
+                    <span>
+                      {financialAttention.overdueCharges.length ===
+                      1
+                        ? `1 cobrança vencida somando ${formatCurrency(
+                            financialAttention.overdueAmount,
+                          )}.`
+                        : `${financialAttention.overdueCharges.length} cobranças vencidas somando ${formatCurrency(
+                            financialAttention.overdueAmount,
+                          )}.`}{' '}
+                      Abra o Financeiro para registrar o recebimento.
+                    </span>
+                  </div>
+
+                  <span className="dashboard-alert__source">
+                    Financeiro
+                  </span>
+                </Link>
+              )}
+
+              {financialAttention.dueTodayCharges.length >
+                0 && (
+                <Link
+                  className="dashboard-alert dashboard-alert--warning dashboard-alert--finance dashboard-alert--clickable"
+                  to="/financeiro"
+                >
+                  <WalletCards
+                    size={18}
+                    strokeWidth={1.8}
+                  />
+
+                  <div>
+                    <strong>
+                      Mensalidades vencem hoje
+                    </strong>
+
+                    <span>
+                      {financialAttention.dueTodayCharges.length ===
+                      1
+                        ? `1 cobrança vence hoje no valor de ${formatCurrency(
+                            financialAttention.dueTodayAmount,
+                          )}.`
+                        : `${financialAttention.dueTodayCharges.length} cobranças vencem hoje somando ${formatCurrency(
+                            financialAttention.dueTodayAmount,
+                          )}.`}
+                    </span>
+                  </div>
+
+                  <span className="dashboard-alert__source">
+                    Financeiro
+                  </span>
+                </Link>
+              )}
+
+              {financialAttention.upcomingCharges.length >
+                0 && (
+                <Link
+                  className="dashboard-alert dashboard-alert--upcoming dashboard-alert--finance dashboard-alert--clickable"
+                  to="/financeiro"
+                >
+                  <WalletCards
+                    size={18}
+                    strokeWidth={1.8}
+                  />
+
+                  <div>
+                    <strong>
+                      Próximos vencimentos
+                    </strong>
+
+                    <span>
+                      {financialAttention.upcomingCharges.length ===
+                      1
+                        ? `1 mensalidade vence nos próximos 3 dias, no valor de ${formatCurrency(
+                            financialAttention.upcomingAmount,
+                          )}.`
+                        : `${financialAttention.upcomingCharges.length} mensalidades vencem nos próximos 3 dias, somando ${formatCurrency(
+                            financialAttention.upcomingAmount,
+                          )}.`}
+                    </span>
+                  </div>
+
+                  <span className="dashboard-alert__source">
+                    Financeiro
+                  </span>
+                </Link>
+              )}
+
               {replenishmentItems.map(
                 (summary) => {
                   const level =

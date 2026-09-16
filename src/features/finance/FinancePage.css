@@ -456,6 +456,10 @@
   border-radius: 14px;
 
   background: var(--color-surface);
+
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
 }
 
 .finance-summary-card__icon {
@@ -497,6 +501,50 @@
 
   font-size: 9.5px;
   line-height: 1.4;
+}
+
+.finance-summary-card:nth-child(2) {
+  border-color: rgba(63, 122, 87, 0.17);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(63, 122, 87, 0.035),
+      transparent 70%
+    ),
+    var(--color-surface);
+}
+
+.finance-summary-card:nth-child(2)
+  .finance-summary-card__icon {
+  background: rgba(63, 122, 87, 0.085);
+  color: var(--color-success);
+}
+
+.finance-summary-card:nth-child(2) > strong {
+  color: var(--color-success);
+}
+
+.finance-summary-card:nth-child(4) {
+  border-color: rgba(184, 78, 78, 0.14);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(184, 78, 78, 0.026),
+      transparent 70%
+    ),
+    var(--color-surface);
+}
+
+.finance-summary-card:nth-child(4)
+  .finance-summary-card__icon {
+  background: rgba(184, 78, 78, 0.065);
+  color: var(--color-danger);
+}
+
+.finance-summary-card:nth-child(4) > strong {
+  color: var(--color-danger);
 }
 
 .finance-summary-card--pending {
@@ -719,6 +767,149 @@
   line-height: 1.5;
 }
 
+.finance-attention-card__badges {
+  margin-top: 10px;
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.finance-attention-badge {
+  width: fit-content;
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.finance-attention-badge--overdue {
+  background: rgba(184, 78, 78, 0.09);
+  color: var(--color-danger);
+}
+
+.finance-attention-badge--today {
+  background: rgba(197, 139, 42, 0.1);
+  color: var(--color-warning);
+}
+
+.finance-attention-charges {
+  margin-top: 14px;
+
+  overflow: hidden;
+
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.finance-attention-charge {
+  min-height: 62px;
+  padding: 9px 10px;
+
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    auto
+    auto;
+
+  align-items: center;
+  gap: 9px;
+}
+
+.finance-attention-charge + .finance-attention-charge {
+  border-top: 1px solid var(--color-border);
+}
+
+.finance-attention-charge__content {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.finance-attention-charge__content strong {
+  overflow: hidden;
+
+  color: var(--color-text);
+
+  font-size: 10.5px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-attention-charge__content span {
+  overflow: hidden;
+
+  color: var(--color-text-muted);
+
+  font-size: 8.8px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-attention-charge__status {
+  padding: 4px 6px;
+
+  border-radius: 999px;
+
+  font-size: 8.5px;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+.finance-attention-charge__status--overdue {
+  background: rgba(184, 78, 78, 0.09);
+  color: var(--color-danger);
+}
+
+.finance-attention-charge__status--due-today {
+  background: rgba(197, 139, 42, 0.1);
+  color: var(--color-warning);
+}
+
+.finance-attention-charge__amount {
+  color: var(--color-forest);
+
+  font-size: 10px;
+
+  white-space: nowrap;
+}
+
+.finance-attention-charge button {
+  min-height: 30px;
+  padding: 0 8px;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: var(--color-forest);
+  color: #ffffff;
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 8.8px;
+  font-weight: 700;
+}
+
+.finance-attention-charge button:hover:not(:disabled) {
+  background: var(--color-moss);
+}
+
+.finance-attention-charge button:disabled {
+  cursor: default;
+
+  opacity: 0.55;
+}
+
 .finance-attention-services {
   margin-top: 14px;
 
@@ -840,6 +1031,9 @@
 
   align-items: center;
   gap: 15px;
+
+  transition:
+    background-color 180ms ease;
 }
 
 .finance-charge + .finance-charge {
@@ -848,6 +1042,18 @@
 
 .finance-charge--paid {
   background: rgba(63, 122, 87, 0.025);
+}
+
+.finance-charge--overdue {
+  background: rgba(184, 78, 78, 0.018);
+}
+
+.finance-charge--due-today {
+  background: rgba(197, 139, 42, 0.025);
+}
+
+.finance-charge--cancelled {
+  opacity: 0.68;
 }
 
 .finance-charge__identity {
@@ -899,13 +1105,33 @@
 
   border-radius: 50%;
 
-  background: rgba(197, 139, 42, 0.09);
+  background: rgba(49, 83, 67, 0.07);
+  color: var(--color-moss);
+}
+
+.finance-charge__status-icon--pending {
+  background: rgba(49, 83, 67, 0.07);
+  color: var(--color-moss);
+}
+
+.finance-charge__status-icon--due-today {
+  background: rgba(197, 139, 42, 0.1);
   color: var(--color-warning);
+}
+
+.finance-charge__status-icon--overdue {
+  background: rgba(184, 78, 78, 0.09);
+  color: var(--color-danger);
 }
 
 .finance-charge__status-icon--paid {
   background: rgba(63, 122, 87, 0.1);
   color: var(--color-success);
+}
+
+.finance-charge__status-icon--cancelled {
+  background: rgba(113, 117, 109, 0.08);
+  color: var(--color-text-muted);
 }
 
 .finance-charge__amount,
@@ -944,13 +1170,28 @@
 }
 
 .finance-status--pending {
+  background: rgba(49, 83, 67, 0.07);
+  color: var(--color-moss);
+}
+
+.finance-status--due-today {
   background: rgba(197, 139, 42, 0.1);
   color: var(--color-warning);
+}
+
+.finance-status--overdue {
+  background: rgba(184, 78, 78, 0.09);
+  color: var(--color-danger);
 }
 
 .finance-status--paid {
   background: rgba(63, 122, 87, 0.1);
   color: var(--color-success);
+}
+
+.finance-status--cancelled {
+  background: rgba(113, 117, 109, 0.08);
+  color: var(--color-text-muted);
 }
 
 .finance-charge__action {
@@ -989,18 +1230,222 @@
   opacity: 0.55;
 }
 
-.finance-charge__done {
+.finance-charge__done,
+.finance-charge__cancelled {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-
-  color: var(--color-success);
 
   font-size: 10.5px;
   font-weight: 700;
 }
 
+.finance-charge__done {
+  color: var(--color-success);
+}
+
+.finance-charge__cancelled {
+  color: var(--color-text-muted);
+}
+
+.finance-transaction-filter-bar {
+  margin-bottom: 10px;
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.finance-transaction-type-filter {
+  padding: 3px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+
+  background: var(--color-surface);
+}
+
+.finance-transaction-filter-button {
+  min-height: 30px;
+  padding: 0 10px;
+
+  border: 1px solid transparent;
+  border-radius: 7px;
+
+  background: transparent;
+  color: var(--color-text-muted);
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.finance-transaction-filter-button:hover {
+  color: var(--color-forest);
+}
+
+.finance-transaction-filter-button:first-child.finance-transaction-filter-button--active {
+  border-color: rgba(49, 83, 67, 0.09);
+
+  background: rgba(49, 83, 67, 0.07);
+  color: var(--color-forest);
+}
+
+.finance-transaction-filter-button:nth-child(2):hover {
+  background: rgba(63, 122, 87, 0.035);
+  color: var(--color-success);
+}
+
+.finance-transaction-filter-button:nth-child(2).finance-transaction-filter-button--active {
+  border-color: rgba(63, 122, 87, 0.12);
+
+  background: rgba(63, 122, 87, 0.085);
+  color: var(--color-success);
+}
+
+.finance-transaction-filter-button:nth-child(3):hover {
+  background: rgba(184, 78, 78, 0.025);
+  color: var(--color-danger);
+}
+
+.finance-transaction-filter-button:nth-child(3).finance-transaction-filter-button--active {
+  border-color: rgba(184, 78, 78, 0.11);
+
+  background: rgba(184, 78, 78, 0.07);
+  color: var(--color-danger);
+}
+
+.finance-transaction-source-toggle {
+  min-height: 36px;
+  padding: 0 11px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.finance-transaction-source-toggle:hover {
+  border-color: rgba(49, 83, 67, 0.25);
+
+  color: var(--color-forest);
+}
+
+.finance-transaction-source-toggle--active {
+  border-color: rgba(49, 83, 67, 0.2);
+
+  background: rgba(49, 83, 67, 0.07);
+  color: var(--color-moss);
+}
+
+.finance-transaction-result-count {
+  margin-left: auto;
+
+  color: var(--color-text-muted);
+
+  font-size: 9.5px;
+  font-weight: 650;
+}
+
+.finance-transaction-source-options {
+  margin-bottom: 12px;
+  padding: 8px;
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+
+  background: rgba(234, 228, 216, 0.28);
+}
+
+.finance-transaction-source-option {
+  min-height: 30px;
+  padding: 0 10px;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  background: transparent;
+  color: var(--color-text-muted);
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.finance-transaction-source-option:hover {
+  background: var(--color-surface);
+  color: var(--color-forest);
+}
+
+.finance-transaction-source-option--active {
+  border-color: rgba(49, 83, 67, 0.15);
+
+  background: var(--color-surface);
+  color: var(--color-moss);
+}
+
+.finance-transaction-day + .finance-transaction-day {
+  border-top: 1px solid var(--color-border);
+}
+
+.finance-transaction-day__header {
+  padding: 8px 15px;
+
+  border-bottom: 1px solid rgba(113, 117, 109, 0.09);
+
+  background: rgba(234, 228, 216, 0.28);
+  color: var(--color-text-muted);
+
+  font-size: 8.8px;
+  font-weight: 750;
+
+  letter-spacing: 0.07em;
+}
+
 .finance-transaction {
+  position: relative;
+
   min-height: 66px;
   padding: 12px 15px;
 
@@ -1012,10 +1457,28 @@
 
   align-items: center;
   gap: 12px;
+
+  transition:
+    box-shadow 180ms ease,
+    background-color 180ms ease;
 }
 
 .finance-transaction + .finance-transaction {
   border-top: 1px solid var(--color-border);
+}
+
+.finance-transaction:has(
+    .finance-transaction__marker--income
+  ):hover {
+  box-shadow:
+    inset 0 0 0 2px rgba(63, 122, 87, 0.42);
+}
+
+.finance-transaction:has(
+    .finance-transaction__marker--expense
+  ):hover {
+  box-shadow:
+    inset 0 0 0 2px rgba(184, 78, 78, 0.38);
 }
 
 .finance-transaction__marker {
@@ -1158,6 +1621,24 @@
   .finance-charge__status {
     display: none;
   }
+
+  .finance-attention-charge {
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto;
+  }
+
+  .finance-attention-charge__status {
+    justify-self: end;
+  }
+
+  .finance-attention-charge__amount {
+    justify-self: start;
+  }
+
+  .finance-attention-charge button {
+    justify-self: end;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1226,6 +1707,16 @@
     grid-template-columns: 1fr;
   }
 
+  .finance-attention-charge {
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto;
+  }
+
+  .finance-attention-charge button {
+    min-height: 32px;
+  }
+
   .finance-charge {
     padding: 15px;
 
@@ -1246,10 +1737,45 @@
     width: 100%;
   }
 
-  .finance-charge__done {
+  .finance-charge__done,
+  .finance-charge__cancelled {
     width: 100%;
 
     justify-content: flex-end;
+  }
+
+  .finance-transaction-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finance-transaction-type-filter {
+    width: 100%;
+  }
+
+  .finance-transaction-filter-button {
+    flex: 1;
+  }
+
+  .finance-transaction-source-toggle {
+    width: 100%;
+  }
+
+  .finance-transaction-result-count {
+    margin-left: 0;
+
+    text-align: right;
+  }
+
+  .finance-transaction-source-options {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finance-transaction-source-option {
+    width: 100%;
+
+    text-align: left;
   }
 
   .finance-transaction {

@@ -121,6 +121,15 @@ export type PendingAppointmentExpense = {
   professionalName: string | null
 }
 
+export type DashboardFinancialAttention = {
+  upcomingCharges: FinancialChargeListItem[]
+  dueTodayCharges: FinancialChargeListItem[]
+  overdueCharges: FinancialChargeListItem[]
+  upcomingAmount: number
+  dueTodayAmount: number
+  overdueAmount: number
+}
+
 const financialChargeSelect = `
   id,
   horse_id,
@@ -248,6 +257,91 @@ function getCurrentCompetenceMonth() {
     )
 
   return `${year}-${month}-01`
+}
+
+function getCurrentDateKey() {
+  const today =
+    new Date()
+
+  const year =
+    today.getFullYear()
+
+  const month =
+    String(
+      today.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    )
+
+  const day =
+    String(
+      today.getDate(),
+    ).padStart(
+      2,
+      '0',
+    )
+
+  return `${year}-${month}-${day}`
+}
+
+function getLocalDateFromKey(
+  value: string,
+) {
+  const [
+    yearText,
+    monthText,
+    dayText,
+  ] =
+    value
+      .slice(
+        0,
+        10,
+      )
+      .split(
+        '-',
+      )
+
+  return new Date(
+    Number(
+      yearText,
+    ),
+    Number(
+      monthText,
+    ) - 1,
+    Number(
+      dayText,
+    ),
+  )
+}
+
+function getDaysBetweenDateKeys(
+  startDateKey: string,
+  endDateKey: string,
+) {
+  const start =
+    getLocalDateFromKey(
+      startDateKey,
+    )
+
+  const end =
+    getLocalDateFromKey(
+      endDateKey,
+    )
+
+  const millisecondsPerDay =
+    24 *
+    60 *
+    60 *
+    1000
+
+  return Math.round(
+    (
+      end.getTime() -
+      start.getTime()
+    ) /
+      millisecondsPerDay,
+  )
 }
 
 function getMonthDateRange(
@@ -599,6 +693,132 @@ export async function getFinancialChargesByMonth(
         )
       },
     )
+}
+
+export async function getDashboardFinancialAttention(): Promise<DashboardFinancialAttention> {
+  const currentCompetence =
+    getCurrentCompetenceMonth()
+
+  const today =
+    getCurrentDateKey()
+
+  const charges =
+    await getFinancialChargesByMonth(
+      currentCompetence,
+    )
+
+  const pendingCharges =
+    charges.filter(
+      (charge) =>
+        charge.status ===
+          'pending' &&
+        charge.dueDate !==
+          null,
+    )
+
+  const upcomingCharges =
+    pendingCharges.filter(
+      (charge) => {
+        if (
+          !charge.dueDate
+        ) {
+          return false
+        }
+
+        const daysUntilDue =
+          getDaysBetweenDateKeys(
+            today,
+            charge.dueDate,
+          )
+
+        return (
+          daysUntilDue >=
+            1 &&
+          daysUntilDue <=
+            3
+        )
+      },
+    )
+
+  const dueTodayCharges =
+    pendingCharges.filter(
+      (charge) => {
+        if (
+          !charge.dueDate
+        ) {
+          return false
+        }
+
+        return (
+          charge.dueDate.slice(
+            0,
+            10,
+          ) ===
+          today
+        )
+      },
+    )
+
+  const overdueCharges =
+    pendingCharges.filter(
+      (charge) => {
+        if (
+          !charge.dueDate
+        ) {
+          return false
+        }
+
+        return (
+          charge.dueDate.slice(
+            0,
+            10,
+          ) <
+          today
+        )
+      },
+    )
+
+  const upcomingAmount =
+    upcomingCharges.reduce(
+      (
+        total,
+        charge,
+      ) =>
+        total +
+        charge.amount,
+      0,
+    )
+
+  const dueTodayAmount =
+    dueTodayCharges.reduce(
+      (
+        total,
+        charge,
+      ) =>
+        total +
+        charge.amount,
+      0,
+    )
+
+  const overdueAmount =
+    overdueCharges.reduce(
+      (
+        total,
+        charge,
+      ) =>
+        total +
+        charge.amount,
+      0,
+    )
+
+  return {
+    upcomingCharges,
+    dueTodayCharges,
+    overdueCharges,
+    upcomingAmount,
+    dueTodayAmount,
+    overdueAmount,
+  }
 }
 
 export async function confirmMonthlyFinancialCharge(

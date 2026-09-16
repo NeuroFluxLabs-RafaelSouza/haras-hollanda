@@ -14,9 +14,11 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CircleX,
   Clock3,
   Plus,
   ReceiptText,
+  SlidersHorizontal,
   TrendingDown,
   WalletCards,
   X,
@@ -45,6 +47,50 @@ import {
 } from './financeService.ts'
 
 import './FinancePage.css'
+
+type ChargeVisualStatus =
+  | 'pending'
+  | 'dueToday'
+  | 'overdue'
+  | 'paid'
+  | 'cancelled'
+
+type TransactionTypeFilter =
+  | 'all'
+  | FinancialTransaction['transactionType']
+
+type TransactionSourceFilter =
+  | 'all'
+  | 'monthly_fee'
+  | 'appointment'
+  | 'inventory_purchase'
+  | 'manual'
+
+type TransactionGroup = {
+  dateKey: string
+  dateLabel: string
+  transactions: FinancialTransaction[]
+}
+
+const TRANSACTION_SOURCE_FILTER_LABELS: Record<
+  TransactionSourceFilter,
+  string
+> = {
+  all:
+    'Todas as origens',
+
+  monthly_fee:
+    'Mensalidades',
+
+  appointment:
+    'Agenda',
+
+  inventory_purchase:
+    'Estoque',
+
+  manual:
+    'Avulsas',
+}
 
 function getCompetenceFromDate(
   date: Date,
@@ -239,18 +285,365 @@ function formatDate(
   )
 }
 
-function sortCharges(
-  charges: FinancialChargeListItem[],
+function formatDateOnly(
+  value: string,
 ) {
-  const statusPriority = {
-    pending:
+  const [
+    yearText,
+    monthText,
+    dayText,
+  ] =
+    value
+      .slice(
+        0,
+        10,
+      )
+      .split(
+        '-',
+      )
+
+  const date =
+    new Date(
+      Number(
+        yearText,
+      ),
+      Number(
+        monthText,
+      ) - 1,
+      Number(
+        dayText,
+      ),
+    )
+
+  return new Intl.DateTimeFormat(
+    'pt-BR',
+    {
+      day:
+        '2-digit',
+
+      month:
+        '2-digit',
+
+      year:
+        'numeric',
+    },
+  ).format(
+    date,
+  )
+}
+
+function getTransactionDateKey(
+  value: string,
+) {
+  const date =
+    new Date(
+      value,
+    )
+
+  const year =
+    date.getFullYear()
+
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    )
+
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
+    )
+
+  return `${year}-${month}-${day}`
+}
+
+function formatTransactionDay(
+  value: string,
+) {
+  return new Intl.DateTimeFormat(
+    'pt-BR',
+    {
+      day:
+        '2-digit',
+
+      month:
+        'long',
+    },
+  )
+    .format(
+      new Date(
+        value,
+      ),
+    )
+    .toUpperCase()
+}
+
+function matchesTransactionSourceFilter(
+  transaction: FinancialTransaction,
+  filter: TransactionSourceFilter,
+) {
+  if (
+    filter ===
+    'all'
+  ) {
+    return true
+  }
+
+  if (
+    filter ===
+    'manual'
+  ) {
+    return (
+      transaction.sourceType ===
+        'manual' ||
+      transaction.sourceType ===
+        'adjustment'
+    )
+  }
+
+  return (
+    transaction.sourceType ===
+    filter
+  )
+}
+
+function getChargeVisualStatus(
+  charge: FinancialChargeListItem,
+  today: string,
+): ChargeVisualStatus {
+  if (
+    charge.status ===
+    'paid'
+  ) {
+    return 'paid'
+  }
+
+  if (
+    charge.status ===
+    'cancelled'
+  ) {
+    return 'cancelled'
+  }
+
+  if (
+    !charge.dueDate
+  ) {
+    return 'pending'
+  }
+
+  const dueDate =
+    charge.dueDate.slice(
       0,
+      10,
+    )
+
+  if (
+    dueDate <
+    today
+  ) {
+    return 'overdue'
+  }
+
+  if (
+    dueDate ===
+    today
+  ) {
+    return 'dueToday'
+  }
+
+  return 'pending'
+}
+
+function getChargeStatusClass(
+  status: ChargeVisualStatus,
+) {
+  if (
+    status ===
+    'dueToday'
+  ) {
+    return 'due-today'
+  }
+
+  return status
+}
+
+function getChargeStatusLabel(
+  status: ChargeVisualStatus,
+) {
+  const labels: Record<
+    ChargeVisualStatus,
+    string
+  > = {
+    pending:
+      'Pendente',
+
+    dueToday:
+      'Vence hoje',
+
+    overdue:
+      'Em atraso',
 
     paid:
-      1,
+      'Pago',
 
     cancelled:
+      'Cancelada',
+  }
+
+  return labels[
+    status
+  ]
+}
+
+function getChargeStatusDetail(
+  charge: FinancialChargeListItem,
+  today: string,
+) {
+  const status =
+    getChargeVisualStatus(
+      charge,
+      today,
+    )
+
+  if (
+    status ===
+    'paid'
+  ) {
+    if (
+      charge.paidAt
+    ) {
+      return `Recebido em ${formatDateTime(
+        charge.paidAt,
+      )}`
+    }
+
+    return 'Recebimento confirmado'
+  }
+
+  if (
+    status ===
+    'cancelled'
+  ) {
+    return 'Cobrança cancelada'
+  }
+
+  if (
+    !charge.dueDate
+  ) {
+    return 'Vencimento não definido'
+  }
+
+  if (
+    status ===
+    'overdue'
+  ) {
+    return `Venceu em ${formatDateOnly(
+      charge.dueDate,
+    )}`
+  }
+
+  if (
+    status ===
+    'dueToday'
+  ) {
+    return `Vence hoje · ${formatDateOnly(
+      charge.dueDate,
+    )}`
+  }
+
+  return `Vence em ${formatDateOnly(
+    charge.dueDate,
+  )}`
+}
+
+function ChargeStatusIcon({
+  status,
+}: {
+  status: ChargeVisualStatus
+}) {
+  if (
+    status ===
+    'paid'
+  ) {
+    return (
+      <CheckCircle2
+        size={18}
+        strokeWidth={1.8}
+      />
+    )
+  }
+
+  if (
+    status ===
+    'cancelled'
+  ) {
+    return (
+      <CircleX
+        size={18}
+        strokeWidth={1.8}
+      />
+    )
+  }
+
+  if (
+    status ===
+    'overdue'
+  ) {
+    return (
+      <AlertTriangle
+        size={18}
+        strokeWidth={1.8}
+      />
+    )
+  }
+
+  if (
+    status ===
+    'dueToday'
+  ) {
+    return (
+      <CalendarClock
+        size={18}
+        strokeWidth={1.8}
+      />
+    )
+  }
+
+  return (
+    <Clock3
+      size={18}
+      strokeWidth={1.8}
+    />
+  )
+}
+
+function sortCharges(
+  charges: FinancialChargeListItem[],
+  today: string,
+) {
+  const statusPriority: Record<
+    ChargeVisualStatus,
+    number
+  > = {
+    overdue:
+      0,
+
+    dueToday:
+      1,
+
+    pending:
       2,
+
+    paid:
+      3,
+
+    cancelled:
+      4,
   }
 
   return [
@@ -260,12 +653,24 @@ function sortCharges(
       first,
       second,
     ) => {
+      const firstStatus =
+        getChargeVisualStatus(
+          first,
+          today,
+        )
+
+      const secondStatus =
+        getChargeVisualStatus(
+          second,
+          today,
+        )
+
       const statusDifference =
         statusPriority[
-          first.status
+          firstStatus
         ] -
         statusPriority[
-          second.status
+          secondStatus
         ]
 
       if (
@@ -293,6 +698,60 @@ function sortCharges(
         'pt-BR',
       )
     },
+  )
+}
+
+function groupTransactionsByDay(
+  transactions: FinancialTransaction[],
+): TransactionGroup[] {
+  const groups =
+    new Map<
+      string,
+      TransactionGroup
+    >()
+
+  transactions.forEach(
+    (transaction) => {
+      const dateKey =
+        getTransactionDateKey(
+          transaction.occurredAt,
+        )
+
+      const existingGroup =
+        groups.get(
+          dateKey,
+        )
+
+      if (
+        existingGroup
+      ) {
+        existingGroup.transactions.push(
+          transaction,
+        )
+
+        return
+      }
+
+      groups.set(
+        dateKey,
+        {
+          dateKey,
+
+          dateLabel:
+            formatTransactionDay(
+              transaction.occurredAt,
+            ),
+
+          transactions: [
+            transaction,
+          ],
+        },
+      )
+    },
+  )
+
+  return Array.from(
+    groups.values(),
   )
 }
 
@@ -405,6 +864,27 @@ export function FinancePage() {
   const [
     savingExpense,
     setSavingExpense,
+  ] = useState(
+    false,
+  )
+
+  const [
+    transactionTypeFilter,
+    setTransactionTypeFilter,
+  ] = useState<TransactionTypeFilter>(
+    'all',
+  )
+
+  const [
+    transactionSourceFilter,
+    setTransactionSourceFilter,
+  ] = useState<TransactionSourceFilter>(
+    'all',
+  )
+
+  const [
+    sourceFilterOpen,
+    setSourceFilterOpen,
   ] = useState(
     false,
   )
@@ -550,9 +1030,11 @@ export function FinancePage() {
       () =>
         sortCharges(
           charges,
+          today,
         ),
       [
         charges,
+        today,
       ],
     )
 
@@ -569,10 +1051,69 @@ export function FinancePage() {
       ],
     )
 
-  const pendingChargeAmount =
+  const overdueCharges =
     useMemo(
       () =>
-        pendingCharges.reduce(
+        charges.filter(
+          (charge) =>
+            getChargeVisualStatus(
+              charge,
+              today,
+            ) ===
+            'overdue',
+        ),
+      [
+        charges,
+        today,
+      ],
+    )
+
+  const dueTodayCharges =
+    useMemo(
+      () =>
+        charges.filter(
+          (charge) =>
+            getChargeVisualStatus(
+              charge,
+              today,
+            ) ===
+            'dueToday',
+        ),
+      [
+        charges,
+        today,
+      ],
+    )
+
+  const urgentMonthlyCharges =
+    useMemo(
+      () =>
+        charges.filter(
+          (charge) => {
+            const status =
+              getChargeVisualStatus(
+                charge,
+                today,
+              )
+
+            return (
+              status ===
+                'overdue' ||
+              status ===
+                'dueToday'
+            )
+          },
+        ),
+      [
+        charges,
+        today,
+      ],
+    )
+
+  const urgentMonthlyAmount =
+    useMemo(
+      () =>
+        urgentMonthlyCharges.reduce(
           (
             total,
             charge,
@@ -582,7 +1123,7 @@ export function FinancePage() {
           0,
         ),
       [
-        pendingCharges,
+        urgentMonthlyCharges,
       ],
     )
 
@@ -603,9 +1144,84 @@ export function FinancePage() {
       ],
     )
 
+  const filteredTransactions =
+    useMemo(
+      () =>
+        transactions.filter(
+          (transaction) => {
+            const matchesType =
+              transactionTypeFilter ===
+                'all' ||
+              transaction.transactionType ===
+                transactionTypeFilter
+
+            const matchesSource =
+              matchesTransactionSourceFilter(
+                transaction,
+                transactionSourceFilter,
+              )
+
+            return (
+              matchesType &&
+              matchesSource
+            )
+          },
+        ),
+      [
+        transactions,
+        transactionTypeFilter,
+        transactionSourceFilter,
+      ],
+    )
+
+  const transactionGroups =
+    useMemo(
+      () =>
+        groupTransactionsByDay(
+          filteredTransactions,
+        ),
+      [
+        filteredTransactions,
+      ],
+    )
+
   const attentionCount =
-    pendingCharges.length +
+    urgentMonthlyCharges.length +
     pendingAppointmentExpenses.length
+
+  const transactionEmptyMessage =
+    useMemo(
+      () => {
+        if (
+          transactionTypeFilter ===
+            'all' &&
+          transactionSourceFilter ===
+            'all'
+        ) {
+          return 'Não há entradas ou saídas de caixa registradas nesta competência.'
+        }
+
+        if (
+          transactionTypeFilter ===
+          'income'
+        ) {
+          return 'Nenhuma entrada corresponde aos filtros selecionados.'
+        }
+
+        if (
+          transactionTypeFilter ===
+          'expense'
+        ) {
+          return 'Nenhuma despesa corresponde aos filtros selecionados.'
+        }
+
+        return 'Nenhuma movimentação corresponde aos filtros selecionados.'
+      },
+      [
+        transactionTypeFilter,
+        transactionSourceFilter,
+      ],
+    )
 
   function changeCompetence(
     nextCompetence: string,
@@ -615,6 +1231,18 @@ export function FinancePage() {
     )
 
     setExpenseFormOpen(
+      false,
+    )
+
+    setTransactionTypeFilter(
+      'all',
+    )
+
+    setTransactionSourceFilter(
+      'all',
+    )
+
+    setSourceFilterOpen(
       false,
     )
 
@@ -677,6 +1305,22 @@ export function FinancePage() {
 
     setSuccessMessage(
       null,
+    )
+  }
+
+  function handleTransactionSourceFilter(
+    filter: TransactionSourceFilter,
+  ) {
+    setTransactionSourceFilter(
+      filter,
+    )
+
+    setTransactionTypeFilter(
+      'all',
+    )
+
+    setSourceFilterOpen(
+      false,
     )
   }
 
@@ -1011,7 +1655,8 @@ export function FinancePage() {
 
             <span>
               Valores e movimentações abaixo são os registros realmente
-              existentes em {formatCompetence(
+              existentes em{' '}
+              {formatCompetence(
                 competence,
               )}. O sistema não reconstrói cobranças que não existiam naquele
               momento.
@@ -1294,7 +1939,12 @@ export function FinancePage() {
           </strong>
 
           <small>
-            Mensalidades ainda não recebidas
+            {loading
+              ? 'Carregando...'
+              : pendingCharges.length ===
+                  1
+                ? '1 mensalidade em aberto'
+                : `${pendingCharges.length} mensalidades em aberto`}
           </small>
         </article>
 
@@ -1374,8 +2024,8 @@ export function FinancePage() {
                 </strong>
 
                 <span>
-                  Não há mensalidades pendentes nem serviços desta competência
-                  aguardando pagamento.
+                  Não há mensalidades vencidas, cobranças vencendo hoje ou
+                  serviços aguardando pagamento.
                 </span>
               </div>
             </div>
@@ -1385,12 +2035,12 @@ export function FinancePage() {
           attentionCount >
             0 && (
             <div className="finance-attention-grid">
-              {pendingCharges.length >
+              {urgentMonthlyCharges.length >
                 0 && (
                 <article className="finance-attention-card">
                   <div className="finance-attention-card__top">
                     <div className="finance-attention-card__icon finance-attention-card__icon--warning">
-                      <Clock3
+                      <AlertTriangle
                         size={18}
                         strokeWidth={1.8}
                       />
@@ -1402,23 +2052,136 @@ export function FinancePage() {
                   </div>
 
                   <strong className="finance-attention-card__title">
-                    {pendingCharges.length ===
+                    {urgentMonthlyCharges.length ===
                     1
-                      ? '1 mensalidade a receber'
-                      : `${pendingCharges.length} mensalidades a receber`}
+                      ? '1 mensalidade exige atenção'
+                      : `${urgentMonthlyCharges.length} mensalidades exigem atenção`}
                   </strong>
 
                   <span className="finance-attention-card__amount">
                     {formatCurrency(
-                      pendingChargeAmount,
+                      urgentMonthlyAmount,
                     )}
                   </span>
 
-                  <small>
-                    {isCurrentCompetence
-                      ? 'Confirme somente quando o dinheiro realmente entrar.'
-                      : 'Se receber uma mensalidade antiga agora, a entrada será registrada na data atual.'}
-                  </small>
+                  <div className="finance-attention-card__badges">
+                    {overdueCharges.length >
+                      0 && (
+                      <span className="finance-attention-badge finance-attention-badge--overdue">
+                        {overdueCharges.length}{' '}
+                        em atraso
+                      </span>
+                    )}
+
+                    {dueTodayCharges.length >
+                      0 && (
+                      <span className="finance-attention-badge finance-attention-badge--today">
+                        {dueTodayCharges.length}{' '}
+                        {dueTodayCharges.length ===
+                        1
+                          ? 'vence hoje'
+                          : 'vencem hoje'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="finance-attention-charges">
+                    {urgentMonthlyCharges
+                      .slice(
+                        0,
+                        3,
+                      )
+                      .map(
+                        (
+                          charge,
+                        ) => {
+                          const visualStatus =
+                            getChargeVisualStatus(
+                              charge,
+                              today,
+                            )
+
+                          const isProcessing =
+                            processingChargeId ===
+                            charge.id
+
+                          return (
+                            <div
+                              className="finance-attention-charge"
+                              key={
+                                charge.id
+                              }
+                            >
+                              <div className="finance-attention-charge__content">
+                                <strong>
+                                  {
+                                    charge.horseName
+                                  }
+                                </strong>
+
+                                <span>
+                                  {
+                                    charge.clientName
+                                  }{' '}
+                                  ·{' '}
+                                  {getChargeStatusDetail(
+                                    charge,
+                                    today,
+                                  )}
+                                </span>
+                              </div>
+
+                              <span
+                                className={`finance-attention-charge__status finance-attention-charge__status--${getChargeStatusClass(
+                                  visualStatus,
+                                )}`}
+                              >
+                                {getChargeStatusLabel(
+                                  visualStatus,
+                                )}
+                              </span>
+
+                              <strong className="finance-attention-charge__amount">
+                                {formatCurrency(
+                                  charge.amount,
+                                )}
+                              </strong>
+
+                              <button
+                                type="button"
+                                disabled={
+                                  processingChargeId !==
+                                  null
+                                }
+                                onClick={() =>
+                                  handleConfirmPayment(
+                                    charge,
+                                  )
+                                }
+                              >
+                                {isProcessing
+                                  ? 'Confirmando...'
+                                  : 'Confirmar'}
+                              </button>
+                            </div>
+                          )
+                        },
+                      )}
+                  </div>
+
+                  {urgentMonthlyCharges.length >
+                    3 && (
+                    <a
+                      className="finance-attention-card__action"
+                      href="#finance-monthly-charges"
+                    >
+                      Ver todas as mensalidades
+
+                      <ArrowRight
+                        size={14}
+                      />
+                    </a>
+                  )}
                 </article>
               )}
 
@@ -1522,7 +2285,10 @@ export function FinancePage() {
           )}
       </section>
 
-      <section className="finance-section">
+      <section
+        className="finance-section"
+        id="finance-monthly-charges"
+      >
         <div className="finance-section__header">
           <div>
             <span className="finance-section__eyebrow">
@@ -1539,12 +2305,7 @@ export function FinancePage() {
               {pendingCharges.length ===
               0
                 ? 'Tudo recebido'
-                : `${pendingCharges.length} pendente${
-                    pendingCharges.length ===
-                    1
-                      ? ''
-                      : 's'
-                  }`}
+                : `${pendingCharges.length} em aberto`}
             </span>
           )}
         </div>
@@ -1582,43 +2343,37 @@ export function FinancePage() {
             <div className="finance-charges">
               {sortedCharges.map(
                 (charge) => {
+                  const visualStatus =
+                    getChargeVisualStatus(
+                      charge,
+                      today,
+                    )
+
+                  const statusClass =
+                    getChargeStatusClass(
+                      visualStatus,
+                    )
+
                   const isProcessing =
                     processingChargeId ===
                     charge.id
 
                   return (
                     <article
-                      className={`finance-charge ${
-                        charge.status ===
-                        'paid'
-                          ? 'finance-charge--paid'
-                          : ''
-                      }`}
+                      className={`finance-charge finance-charge--${statusClass}`}
                       key={
                         charge.id
                       }
                     >
                       <div className="finance-charge__identity">
                         <div
-                          className={`finance-charge__status-icon ${
-                            charge.status ===
-                            'paid'
-                              ? 'finance-charge__status-icon--paid'
-                              : ''
-                          }`}
+                          className={`finance-charge__status-icon finance-charge__status-icon--${statusClass}`}
                         >
-                          {charge.status ===
-                          'paid' ? (
-                            <CheckCircle2
-                              size={18}
-                              strokeWidth={1.8}
-                            />
-                          ) : (
-                            <Clock3
-                              size={18}
-                              strokeWidth={1.8}
-                            />
-                          )}
+                          <ChargeStatusIcon
+                            status={
+                              visualStatus
+                            }
+                          />
                         </div>
 
                         <div>
@@ -1650,29 +2405,19 @@ export function FinancePage() {
 
                       <div className="finance-charge__status">
                         <span
-                          className={`finance-status ${
-                            charge.status ===
-                            'paid'
-                              ? 'finance-status--paid'
-                              : 'finance-status--pending'
-                          }`}
+                          className={`finance-status finance-status--${statusClass}`}
                         >
-                          {charge.status ===
-                          'paid'
-                            ? 'Pago'
-                            : 'Pendente'}
+                          {getChargeStatusLabel(
+                            visualStatus,
+                          )}
                         </span>
 
-                        {charge.status ===
-                          'paid' &&
-                          charge.paidAt && (
-                            <small>
-                              Recebido em{' '}
-                              {formatDateTime(
-                                charge.paidAt,
-                              )}
-                            </small>
+                        <small>
+                          {getChargeStatusDetail(
+                            charge,
+                            today,
                           )}
+                        </small>
                       </div>
 
                       <div className="finance-charge__action">
@@ -1696,13 +2441,22 @@ export function FinancePage() {
                                 ? 'Confirmar recebimento'
                                 : 'Receber agora'}
                           </button>
-                        ) : (
+                        ) : charge.status ===
+                          'paid' ? (
                           <span className="finance-charge__done">
                             <CheckCircle2
                               size={15}
                             />
 
                             Recebido
+                          </span>
+                        ) : (
+                          <span className="finance-charge__cancelled">
+                            <CircleX
+                              size={15}
+                            />
+
+                            Cancelada
                           </span>
                         )}
                       </div>
@@ -1727,6 +2481,160 @@ export function FinancePage() {
           </div>
         </div>
 
+        {!loading && (
+          <>
+            <div className="finance-transaction-filter-bar">
+              <div
+                className="finance-transaction-type-filter"
+                role="group"
+                aria-label="Filtrar movimentações por tipo"
+              >
+                <button
+                  type="button"
+                  className={
+                    transactionTypeFilter ===
+                    'all'
+                      ? 'finance-transaction-filter-button finance-transaction-filter-button--active'
+                      : 'finance-transaction-filter-button'
+                  }
+                  aria-pressed={
+                    transactionTypeFilter ===
+                    'all'
+                  }
+                  onClick={() =>
+                    setTransactionTypeFilter(
+                      'all',
+                    )
+                  }
+                >
+                  Todas
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    transactionTypeFilter ===
+                    'income'
+                      ? 'finance-transaction-filter-button finance-transaction-filter-button--active'
+                      : 'finance-transaction-filter-button'
+                  }
+                  aria-pressed={
+                    transactionTypeFilter ===
+                    'income'
+                  }
+                  onClick={() =>
+                    setTransactionTypeFilter(
+                      'income',
+                    )
+                  }
+                >
+                  Entradas
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    transactionTypeFilter ===
+                    'expense'
+                      ? 'finance-transaction-filter-button finance-transaction-filter-button--active'
+                      : 'finance-transaction-filter-button'
+                  }
+                  aria-pressed={
+                    transactionTypeFilter ===
+                    'expense'
+                  }
+                  onClick={() =>
+                    setTransactionTypeFilter(
+                      'expense',
+                    )
+                  }
+                >
+                  Despesas
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className={`finance-transaction-source-toggle ${
+                  transactionSourceFilter !==
+                  'all'
+                    ? 'finance-transaction-source-toggle--active'
+                    : ''
+                }`}
+                aria-expanded={
+                  sourceFilterOpen
+                }
+                onClick={() =>
+                  setSourceFilterOpen(
+                    (
+                      currentValue,
+                    ) =>
+                      !currentValue,
+                  )
+                }
+              >
+                <SlidersHorizontal
+                  size={14}
+                  strokeWidth={1.8}
+                />
+
+                {transactionSourceFilter ===
+                'all'
+                  ? 'Filtrar origem'
+                  : `Origem: ${
+                      TRANSACTION_SOURCE_FILTER_LABELS[
+                        transactionSourceFilter
+                      ]
+                    }`}
+              </button>
+
+              <span className="finance-transaction-result-count">
+                {filteredTransactions.length}{' '}
+                {filteredTransactions.length ===
+                1
+                  ? 'movimentação'
+                  : 'movimentações'}
+              </span>
+            </div>
+
+            {sourceFilterOpen && (
+              <div className="finance-transaction-source-options">
+                {(
+                  Object.keys(
+                    TRANSACTION_SOURCE_FILTER_LABELS,
+                  ) as TransactionSourceFilter[]
+                ).map(
+                  (filter) => (
+                    <button
+                      type="button"
+                      key={
+                        filter
+                      }
+                      className={
+                        transactionSourceFilter ===
+                        filter
+                          ? 'finance-transaction-source-option finance-transaction-source-option--active'
+                          : 'finance-transaction-source-option'
+                      }
+                      onClick={() =>
+                        handleTransactionSourceFilter(
+                          filter,
+                        )
+                      }
+                    >
+                      {
+                        TRANSACTION_SOURCE_FILTER_LABELS[
+                          filter
+                        ]
+                      }
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
+          </>
+        )}
+
         {loading && (
           <div className="finance-state">
             Carregando movimentações...
@@ -1734,7 +2642,7 @@ export function FinancePage() {
         )}
 
         {!loading &&
-          transactions.length ===
+          filteredTransactions.length ===
             0 && (
             <div className="finance-empty finance-empty--compact">
               <ReceiptText
@@ -1743,70 +2651,88 @@ export function FinancePage() {
               />
 
               <strong>
-                Nenhuma movimentação registrada
+                Nenhuma movimentação encontrada
               </strong>
 
               <span>
-                Não há entradas ou saídas de caixa registradas nesta
-                competência.
+                {transactionEmptyMessage}
               </span>
             </div>
           )}
 
         {!loading &&
-          transactions.length >
+          transactionGroups.length >
             0 && (
             <div className="finance-transactions">
-              {transactions.map(
+              {transactionGroups.map(
                 (
-                  transaction,
+                  group,
                 ) => (
-                  <article
-                    className="finance-transaction"
+                  <section
+                    className="finance-transaction-day"
                     key={
-                      transaction.id
+                      group.dateKey
                     }
                   >
-                    <div
-                      className={`finance-transaction__marker finance-transaction__marker--${transaction.transactionType}`}
-                    />
-
-                    <div className="finance-transaction__content">
-                      <strong>
-                        {
-                          transaction.description
-                        }
-                      </strong>
-
-                      <div className="finance-transaction__meta">
-                        <span className="finance-transaction__source">
-                          {
-                            FINANCIAL_TRANSACTION_SOURCE_LABELS[
-                              transaction.sourceType
-                            ]
-                          }
-                        </span>
-
-                        <span>
-                          {formatDateTime(
-                            transaction.occurredAt,
-                          )}
-                        </span>
-                      </div>
+                    <div className="finance-transaction-day__header">
+                      {
+                        group.dateLabel
+                      }
                     </div>
 
-                    <strong
-                      className={`finance-transaction__amount finance-transaction__amount--${transaction.transactionType}`}
-                    >
-                      {transaction.transactionType ===
-                      'income'
-                        ? '+'
-                        : '-'}{' '}
-                      {formatCurrency(
-                        transaction.amount,
-                      )}
-                    </strong>
-                  </article>
+                    {group.transactions.map(
+                      (
+                        transaction,
+                      ) => (
+                        <article
+                          className="finance-transaction"
+                          key={
+                            transaction.id
+                          }
+                        >
+                          <div
+                            className={`finance-transaction__marker finance-transaction__marker--${transaction.transactionType}`}
+                          />
+
+                          <div className="finance-transaction__content">
+                            <strong>
+                              {
+                                transaction.description
+                              }
+                            </strong>
+
+                            <div className="finance-transaction__meta">
+                              <span className="finance-transaction__source">
+                                {
+                                  FINANCIAL_TRANSACTION_SOURCE_LABELS[
+                                    transaction.sourceType
+                                  ]
+                                }
+                              </span>
+
+                              <span>
+                                {formatDateTime(
+                                  transaction.occurredAt,
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          <strong
+                            className={`finance-transaction__amount finance-transaction__amount--${transaction.transactionType}`}
+                          >
+                            {transaction.transactionType ===
+                            'income'
+                              ? '+'
+                              : '-'}{' '}
+                            {formatCurrency(
+                              transaction.amount,
+                            )}
+                          </strong>
+                        </article>
+                      ),
+                    )}
+                  </section>
                 ),
               )}
             </div>

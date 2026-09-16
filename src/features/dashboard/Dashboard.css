@@ -310,6 +310,16 @@
   line-height: 1.45;
 }
 
+.dashboard-alert--upcoming {
+  border-color: rgba(49, 83, 67, 0.15);
+  background: rgba(49, 83, 67, 0.045);
+  color: var(--color-moss);
+}
+
+.dashboard-alert--upcoming strong {
+  color: var(--color-forest);
+}
+
 .dashboard-alert--warning {
   border-color: rgba(197, 139, 42, 0.17);
   background: rgba(197, 139, 42, 0.065);
@@ -326,6 +336,16 @@
   color: var(--color-danger);
 }
 
+.dashboard-alert--finance {
+  box-shadow:
+    inset 3px 0 0 currentColor;
+}
+
+.dashboard-alert--finance:hover {
+  box-shadow:
+    inset 4px 0 0 currentColor;
+}
+
 .dashboard-alert--empty {
   grid-template-columns:
     20px minmax(0, 1fr);
@@ -339,11 +359,28 @@
   text-decoration: none;
   transition:
     border-color 180ms ease,
-    transform 180ms ease;
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease;
 }
 
 .dashboard-alert--clickable:hover {
   transform: translateX(2px);
+}
+
+.dashboard-alert--upcoming.dashboard-alert--clickable:hover {
+  border-color: rgba(49, 83, 67, 0.28);
+  background: rgba(49, 83, 67, 0.075);
+}
+
+.dashboard-alert--warning.dashboard-alert--clickable:hover {
+  border-color: rgba(197, 139, 42, 0.32);
+  background: rgba(197, 139, 42, 0.09);
+}
+
+.dashboard-alert--danger.dashboard-alert--clickable:hover {
+  border-color: rgba(184, 78, 78, 0.32);
+  background: rgba(184, 78, 78, 0.085);
 }
 
 .dashboard-alert--clickable:focus-visible {
