@@ -125,9 +125,11 @@ export type DashboardFinancialAttention = {
   upcomingCharges: FinancialChargeListItem[]
   dueTodayCharges: FinancialChargeListItem[]
   overdueCharges: FinancialChargeListItem[]
+  pendingAppointmentExpenses: PendingAppointmentExpense[]
   upcomingAmount: number
   dueTodayAmount: number
   overdueAmount: number
+  pendingAppointmentExpenseAmount: number
 }
 
 const financialChargeSelect = `
@@ -582,6 +584,160 @@ function mapFinancialMonthSummary(
   }
 }
 
+async function resolvePendingAppointmentExpenses(
+  appointments: AppointmentExpenseRow[],
+): Promise<PendingAppointmentExpense[]> {
+  if (
+    appointments.length ===
+    0
+  ) {
+    return []
+  }
+
+  const appointmentIds =
+    appointments.map(
+      (appointment) =>
+        appointment.id,
+    )
+
+  const {
+    data: transactionData,
+    error: transactionError,
+  } = await supabase
+    .from(
+      'financial_transactions',
+    )
+    .select(
+      'appointment_id',
+    )
+    .eq(
+      'source_type',
+      'appointment',
+    )
+    .in(
+      'appointment_id',
+      appointmentIds,
+    )
+
+  if (transactionError) {
+    throw new Error(
+      `Erro ao verificar pagamentos da Agenda: ${transactionError.message}`,
+    )
+  }
+
+  const paidAppointmentIds =
+    new Set(
+      (
+        transactionData ??
+        []
+      )
+        .map(
+          (transaction) =>
+            (
+              transaction as AppointmentFinancialTransactionRow
+            ).appointment_id,
+        )
+        .filter(
+          (
+            appointmentId,
+          ): appointmentId is string =>
+            appointmentId !==
+            null,
+        ),
+    )
+
+  return appointments
+    .filter(
+      (appointment) =>
+        !paidAppointmentIds.has(
+          appointment.id,
+        ),
+    )
+    .map(
+      (appointment) => {
+        const horse =
+          getSingleRelation(
+            appointment.horse,
+          )
+
+        const professional =
+          getSingleRelation(
+            appointment.professional,
+          )
+
+        return {
+          appointmentId:
+            appointment.id,
+
+          title:
+            appointment.title,
+
+          scheduledAt:
+            appointment.scheduled_at,
+
+          serviceAmount:
+            Number(
+              appointment.service_amount,
+            ),
+
+          horseName:
+            horse?.name ??
+            'Cavalo não identificado',
+
+          professionalName:
+            professional?.name ??
+            null,
+        }
+      },
+    )
+}
+
+async function getAllPendingAppointmentExpenses(): Promise<PendingAppointmentExpense[]> {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      'appointments',
+    )
+    .select(
+      pendingAppointmentSelect,
+    )
+    .eq(
+      'status',
+      'completed',
+    )
+    .not(
+      'service_amount',
+      'is',
+      null,
+    )
+    .gt(
+      'service_amount',
+      0,
+    )
+    .order(
+      'scheduled_at',
+      {
+        ascending:
+          true,
+      },
+    )
+
+  if (error) {
+    throw new Error(
+      `Erro ao buscar serviços aguardando pagamento: ${error.message}`,
+    )
+  }
+
+  return resolvePendingAppointmentExpenses(
+    (
+      data ??
+      []
+    ) as AppointmentExpenseRow[],
+  )
+}
+
 export async function ensureMonthlyFinancialCharges(
   competenceMonth: string,
 ): Promise<EnsureMonthlyChargesResult> {
@@ -702,10 +858,16 @@ export async function getDashboardFinancialAttention(): Promise<DashboardFinanci
   const today =
     getCurrentDateKey()
 
-  const charges =
-    await getFinancialChargesByMonth(
+  const [
+    charges,
+    pendingAppointmentExpenses,
+  ] = await Promise.all([
+    getFinancialChargesByMonth(
       currentCompetence,
-    )
+    ),
+
+    getAllPendingAppointmentExpenses(),
+  ])
 
   const pendingCharges =
     charges.filter(
@@ -811,13 +973,26 @@ export async function getDashboardFinancialAttention(): Promise<DashboardFinanci
       0,
     )
 
+  const pendingAppointmentExpenseAmount =
+    pendingAppointmentExpenses.reduce(
+      (
+        total,
+        appointment,
+      ) =>
+        total +
+        appointment.serviceAmount,
+      0,
+    )
+
   return {
     upcomingCharges,
     dueTodayCharges,
     overdueCharges,
+    pendingAppointmentExpenses,
     upcomingAmount,
     dueTodayAmount,
     overdueAmount,
+    pendingAppointmentExpenseAmount,
   }
 }
 
@@ -1066,8 +1241,8 @@ export async function getPendingAppointmentExpenses(
     )
 
   const {
-    data: appointmentData,
-    error: appointmentError,
+    data,
+    error,
   } = await supabase
     .from(
       'appointments',
@@ -1104,121 +1279,18 @@ export async function getPendingAppointmentExpenses(
       },
     )
 
-  if (appointmentError) {
+  if (error) {
     throw new Error(
-      `Erro ao buscar serviços aguardando pagamento: ${appointmentError.message}`,
+      `Erro ao buscar serviços aguardando pagamento: ${error.message}`,
     )
   }
 
-  const appointments =
+  return resolvePendingAppointmentExpenses(
     (
-      appointmentData ??
+      data ??
       []
-    ) as AppointmentExpenseRow[]
-
-  if (
-    appointments.length ===
-    0
-  ) {
-    return []
-  }
-
-  const appointmentIds =
-    appointments.map(
-      (appointment) =>
-        appointment.id,
-    )
-
-  const {
-    data: transactionData,
-    error: transactionError,
-  } = await supabase
-    .from(
-      'financial_transactions',
-    )
-    .select(
-      'appointment_id',
-    )
-    .eq(
-      'source_type',
-      'appointment',
-    )
-    .in(
-      'appointment_id',
-      appointmentIds,
-    )
-
-  if (transactionError) {
-    throw new Error(
-      `Erro ao verificar pagamentos da Agenda: ${transactionError.message}`,
-    )
-  }
-
-  const paidAppointmentIds =
-    new Set(
-      (
-        transactionData ??
-        []
-      )
-        .map(
-          (transaction) =>
-            (
-              transaction as AppointmentFinancialTransactionRow
-            ).appointment_id,
-        )
-        .filter(
-          (
-            appointmentId,
-          ): appointmentId is string =>
-            appointmentId !==
-            null,
-        ),
-    )
-
-  return appointments
-    .filter(
-      (appointment) =>
-        !paidAppointmentIds.has(
-          appointment.id,
-        ),
-    )
-    .map(
-      (appointment) => {
-        const horse =
-          getSingleRelation(
-            appointment.horse,
-          )
-
-        const professional =
-          getSingleRelation(
-            appointment.professional,
-          )
-
-        return {
-          appointmentId:
-            appointment.id,
-
-          title:
-            appointment.title,
-
-          scheduledAt:
-            appointment.scheduled_at,
-
-          serviceAmount:
-            Number(
-              appointment.service_amount,
-            ),
-
-          horseName:
-            horse?.name ??
-            'Cavalo não identificado',
-
-          professionalName:
-            professional?.name ??
-            null,
-        }
-      },
-    )
+    ) as AppointmentExpenseRow[],
+  )
 }
 
 export async function loadFinancialMonth(

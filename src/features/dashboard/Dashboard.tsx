@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  ReceiptText,
   WalletCards,
 } from 'lucide-react'
 
@@ -63,9 +64,11 @@ const emptyFinancialAttention: DashboardFinancialAttention = {
   upcomingCharges: [],
   dueTodayCharges: [],
   overdueCharges: [],
+  pendingAppointmentExpenses: [],
   upcomingAmount: 0,
   dueTodayAmount: 0,
   overdueAmount: 0,
+  pendingAppointmentExpenseAmount: 0,
 }
 
 function getTodayDateKey() {
@@ -433,7 +436,8 @@ export function Dashboard() {
   const financialAttentionCount =
     financialAttention.upcomingCharges.length +
     financialAttention.dueTodayCharges.length +
-    financialAttention.overdueCharges.length
+    financialAttention.overdueCharges.length +
+    financialAttention.pendingAppointmentExpenses.length
 
   const attentionCount =
     financialAttentionCount +
@@ -852,6 +856,40 @@ export function Dashboard() {
                           )}.`
                         : `${financialAttention.upcomingCharges.length} mensalidades vencem nos próximos 3 dias, somando ${formatCurrency(
                             financialAttention.upcomingAmount,
+                          )}.`}
+                    </span>
+                  </div>
+
+                  <span className="dashboard-alert__source">
+                    Financeiro
+                  </span>
+                </Link>
+              )}
+
+              {financialAttention.pendingAppointmentExpenses.length >
+                0 && (
+                <Link
+                  className="dashboard-alert dashboard-alert--warning dashboard-alert--finance dashboard-alert--clickable"
+                  to="/financeiro"
+                >
+                  <ReceiptText
+                    size={18}
+                    strokeWidth={1.8}
+                  />
+
+                  <div>
+                    <strong>
+                      Serviços aguardando pagamento
+                    </strong>
+
+                    <span>
+                      {financialAttention.pendingAppointmentExpenses.length ===
+                      1
+                        ? `1 serviço concluído ainda aguarda pagamento, no valor de ${formatCurrency(
+                            financialAttention.pendingAppointmentExpenseAmount,
+                          )}.`
+                        : `${financialAttention.pendingAppointmentExpenses.length} serviços concluídos ainda aguardam pagamento, somando ${formatCurrency(
+                            financialAttention.pendingAppointmentExpenseAmount,
                           )}.`}
                     </span>
                   </div>
