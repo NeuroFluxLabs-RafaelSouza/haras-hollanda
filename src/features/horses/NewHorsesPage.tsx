@@ -17,6 +17,10 @@ import {
 } from 'react-router-dom'
 
 import {
+  MoneyInput,
+} from '../../components/ui/MoneyInput.tsx'
+
+import {
   SearchableSelect,
   type SearchableSelectOption,
 } from '../../components/ui/SearchableSelect.tsx'
@@ -25,13 +29,13 @@ import type {
   Client,
 } from '../../domain/client.ts'
 
-import {
-  HORSE_BREEDS,
-} from '../../domain/horseBreeds.ts'
-
 import type {
   HorseSex,
 } from '../../domain/horse.ts'
+
+import {
+  HORSE_BREEDS,
+} from '../../domain/horseBreeds.ts'
 
 import type {
   Stall,
@@ -55,31 +59,71 @@ const breedOptions: SearchableSelectOption[] =
   }))
 
 export function NewHorsesPage() {
-  const navigate = useNavigate()
+  const navigate =
+    useNavigate()
 
-  const [clients, setClients] = useState<Client[]>([])
-  const [availableStalls, setAvailableStalls] =
-    useState<Stall[]>([])
+  const [
+    clients,
+    setClients,
+  ] = useState<Client[]>([])
 
-  const [name, setName] = useState('')
-  const [breed, setBreed] = useState('')
-  const [sex, setSex] =
-    useState<HorseSex>('male')
+  const [
+    availableStalls,
+    setAvailableStalls,
+  ] = useState<Stall[]>([])
 
-  const [clientId, setClientId] = useState('')
-  const [stallId, setStallId] = useState('')
-  const [monthlyFee, setMonthlyFee] = useState('')
+  const [
+    name,
+    setName,
+  ] = useState('')
 
-  const [loadingOptions, setLoadingOptions] =
-    useState(true)
+  const [
+    breed,
+    setBreed,
+  ] = useState('')
 
-  const [saving, setSaving] = useState(false)
+  const [
+    sex,
+    setSex,
+  ] = useState<HorseSex>(
+    'male',
+  )
 
-  const [error, setError] =
-    useState<string | null>(null)
+  const [
+    clientId,
+    setClientId,
+  ] = useState('')
+
+  const [
+    stallId,
+    setStallId,
+  ] = useState('')
+
+  const [
+    monthlyFee,
+    setMonthlyFee,
+  ] = useState(0)
+
+  const [
+    loadingOptions,
+    setLoadingOptions,
+  ] = useState(true)
+
+  const [
+    saving,
+    setSaving,
+  ] = useState(false)
+
+  const [
+    error,
+    setError,
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadFormOptions() {
       try {
@@ -91,19 +135,29 @@ export function NewHorsesPage() {
           getAvailableStalls(),
         ])
 
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
         const activeClients =
           clientsData.filter(
-            (client) => client.active,
+            (client) =>
+              client.active,
           )
 
-        setClients(activeClients)
-        setAvailableStalls(stallsData)
+        setClients(
+          activeClients,
+        )
+
+        setAvailableStalls(
+          stallsData,
+        )
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -112,10 +166,16 @@ export function NewHorsesPage() {
             ? error.message
             : 'Não foi possível carregar os dados do formulário.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoadingOptions(false)
+        if (
+          isMounted
+        ) {
+          setLoadingOptions(
+            false,
+          )
         }
       }
     }
@@ -123,7 +183,8 @@ export function NewHorsesPage() {
     loadFormOptions()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
   }, [])
 
@@ -132,9 +193,12 @@ export function NewHorsesPage() {
       () =>
         !breed ||
         HORSE_BREEDS.some(
-          (item) => item === breed,
+          (item) =>
+            item === breed,
         ),
-      [breed],
+      [
+        breed,
+      ],
     )
 
   async function handleSubmit(
@@ -142,81 +206,107 @@ export function NewHorsesPage() {
   ) {
     event.preventDefault()
 
-    setError(null)
+    setError(
+      null,
+    )
 
-    const trimmedName = name.trim()
+    const trimmedName =
+      name.trim()
 
-    if (!trimmedName) {
+    if (
+      !trimmedName
+    ) {
       setError(
         'Informe o nome do cavalo.',
       )
+
       return
     }
 
-    if (!breed) {
+    if (
+      !breed
+    ) {
       setError(
         'Selecione a raça do cavalo.',
       )
+
       return
     }
 
-    if (!selectedBreedIsValid) {
+    if (
+      !selectedBreedIsValid
+    ) {
       setError(
         'Selecione uma raça disponível no catálogo.',
       )
+
       return
     }
 
-    if (!clientId) {
+    if (
+      !clientId
+    ) {
       setError(
         'Selecione o cliente responsável.',
       )
+
       return
     }
 
-    const parsedMonthlyFee =
-      monthlyFee
-        ? Number(
-            monthlyFee.replace(',', '.'),
-          )
-        : null
-
     if (
-      parsedMonthlyFee !== null &&
-      (
-        Number.isNaN(parsedMonthlyFee) ||
-        parsedMonthlyFee < 0
-      )
+      !Number.isFinite(
+        monthlyFee,
+      ) ||
+      monthlyFee < 0
     ) {
       setError(
         'Informe uma mensalidade válida.',
       )
+
       return
     }
 
-    setSaving(true)
+    setSaving(
+      true,
+    )
 
     try {
       await createHorse({
-        name: trimmedName,
+        name:
+          trimmedName,
+
         breed,
+
         sex,
+
         clientId,
-        stallId: stallId || null,
+
+        stallId:
+          stallId ||
+          null,
+
         monthlyFee:
-          parsedMonthlyFee,
+          monthlyFee > 0
+            ? monthlyFee
+            : null,
       })
 
-      navigate('/cavalos')
+      navigate(
+        '/cavalos',
+      )
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Não foi possível cadastrar o cavalo.'
 
-      setError(message)
+      setError(
+        message,
+      )
     } finally {
-      setSaving(false)
+      setSaving(
+        false,
+      )
     }
   }
 
@@ -227,8 +317,11 @@ export function NewHorsesPage() {
           className="new-horse-header__back"
           to="/cavalos"
         >
-          <ArrowLeft size={17} />
-          Cavalos
+          <ArrowLeft
+            size={17}
+          />
+
+          Voltar aos cavalos
         </Link>
 
         <div>
@@ -248,7 +341,9 @@ export function NewHorsesPage() {
 
       <form
         className="new-horse-form"
-        onSubmit={handleSubmit}
+        onSubmit={
+          handleSubmit
+        }
       >
         <div className="new-horse-form__section">
           <div className="new-horse-form__section-header">
@@ -280,8 +375,12 @@ export function NewHorsesPage() {
                 id="name"
                 name="name"
                 type="text"
-                value={name}
-                onChange={(event) =>
+                value={
+                  name
+                }
+                onChange={(
+                  event,
+                ) =>
                   setName(
                     event.target.value,
                   )
@@ -299,11 +398,17 @@ export function NewHorsesPage() {
 
               <SearchableSelect
                 id="breed"
-                value={breed}
-                options={breedOptions}
+                value={
+                  breed
+                }
+                options={
+                  breedOptions
+                }
                 placeholder="Pesquise uma raça..."
                 emptyMessage="Nenhuma raça encontrada."
-                onChange={setBreed}
+                onChange={
+                  setBreed
+                }
               />
 
               <span className="new-horse-field__help">
@@ -319,8 +424,12 @@ export function NewHorsesPage() {
               <select
                 id="sex"
                 name="sex"
-                value={sex}
-                onChange={(event) =>
+                value={
+                  sex
+                }
+                onChange={(
+                  event,
+                ) =>
                   setSex(
                     event.target
                       .value as HorseSex,
@@ -373,8 +482,12 @@ export function NewHorsesPage() {
                 <select
                   id="client"
                   name="client"
-                  value={clientId}
-                  onChange={(event) =>
+                  value={
+                    clientId
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setClientId(
                       event.target.value,
                     )
@@ -386,18 +499,27 @@ export function NewHorsesPage() {
                   </option>
 
                   {clients.map(
-                    (client) => (
+                    (
+                      client,
+                    ) => (
                       <option
-                        value={client.id}
-                        key={client.id}
+                        value={
+                          client.id
+                        }
+                        key={
+                          client.id
+                        }
                       >
-                        {client.name}
+                        {
+                          client.name
+                        }
                       </option>
                     ),
                   )}
                 </select>
 
-                {clients.length === 0 && (
+                {clients.length ===
+                  0 && (
                   <span className="new-horse-field__help">
                     Nenhum cliente ativo está disponível para vinculação.
                   </span>
@@ -412,8 +534,12 @@ export function NewHorsesPage() {
                 <select
                   id="stall"
                   name="stall"
-                  value={stallId}
-                  onChange={(event) =>
+                  value={
+                    stallId
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setStallId(
                       event.target.value,
                     )
@@ -424,12 +550,20 @@ export function NewHorsesPage() {
                   </option>
 
                   {availableStalls.map(
-                    (stall) => (
+                    (
+                      stall,
+                    ) => (
                       <option
-                        value={stall.id}
-                        key={stall.id}
+                        value={
+                          stall.id
+                        }
+                        key={
+                          stall.id
+                        }
                       >
-                        {stall.name}
+                        {
+                          stall.name
+                        }
                       </option>
                     ),
                   )}
@@ -445,29 +579,20 @@ export function NewHorsesPage() {
                   Mensalidade
                 </label>
 
-                <div className="new-horse-money-field">
-                  <span>
-                    R$
-                  </span>
-
-                  <input
-                    id="monthlyFee"
-                    name="monthlyFee"
-                    type="text"
-                    inputMode="decimal"
-                    value={monthlyFee}
-                    onChange={(event) =>
-                      setMonthlyFee(
-                        event.target.value,
-                      )
-                    }
-                    placeholder="0,00"
-                    autoComplete="off"
-                  />
-                </div>
+                <MoneyInput
+                  id="monthlyFee"
+                  name="monthlyFee"
+                  value={
+                    monthlyFee
+                  }
+                  onChange={
+                    setMonthlyFee
+                  }
+                />
 
                 <span className="new-horse-field__help">
-                  Valor mensal relacionado a este cavalo.
+                  Digite o valor como faria em um PIX. O sistema formata em
+                  reais automaticamente.
                 </span>
               </div>
             </div>

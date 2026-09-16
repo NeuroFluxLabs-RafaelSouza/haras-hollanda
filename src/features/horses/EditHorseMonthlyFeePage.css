@@ -1,0 +1,187 @@
+.edit-horse-fee-page {
+  width: 100%;
+}
+
+.edit-horse-fee-header {
+  margin-bottom: 30px;
+}
+
+.edit-horse-fee-header__back {
+  width: fit-content;
+  margin-bottom: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-moss);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.edit-horse-fee-header__back:hover {
+  text-decoration: underline;
+}
+
+.edit-horse-fee-form {
+  width: min(100%, 560px);
+}
+
+.edit-horse-fee-card {
+  padding: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  background: var(--color-surface);
+}
+
+.edit-horse-fee-card__heading {
+  padding-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.edit-horse-fee-card__icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(49, 83, 67, 0.08);
+  color: var(--color-forest);
+}
+
+.edit-horse-fee-card__heading > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.edit-horse-fee-card__heading span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.edit-horse-fee-card__heading strong {
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.edit-horse-fee-field {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-horse-fee-field label {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.edit-horse-fee-field > span {
+  color: var(--color-text-muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.edit-horse-fee-notice {
+  margin-top: 20px;
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 10px;
+  background: rgba(49, 83, 67, 0.055);
+}
+
+.edit-horse-fee-notice strong {
+  color: var(--color-forest);
+  font-size: 11px;
+}
+
+.edit-horse-fee-notice span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.edit-horse-fee-error {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(184, 78, 78, 0.2);
+  border-radius: 10px;
+  background: rgba(184, 78, 78, 0.05);
+  color: var(--color-danger);
+  font-size: 11px;
+}
+
+.edit-horse-fee-actions {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.edit-horse-fee-actions a,
+.edit-horse-fee-actions button {
+  min-height: 39px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.edit-horse-fee-actions a {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.edit-horse-fee-actions button {
+  border: 0;
+  background: var(--color-forest);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.edit-horse-fee-actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.edit-horse-fee-state {
+  width: min(100%, 560px);
+  padding: 34px 22px;
+  border: 1px dashed var(--color-border);
+  border-radius: 13px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .edit-horse-fee-card {
+    padding: 18px;
+  }
+
+  .edit-horse-fee-actions {
+    flex-direction: column-reverse;
+  }
+
+  .edit-horse-fee-actions a,
+  .edit-horse-fee-actions button {
+    width: 100%;
+  }
+}

@@ -114,7 +114,9 @@ function getUnitLabel(
   unit: InventoryUnit,
   quantity: number,
 ) {
-  if (quantity === 1) {
+  if (
+    quantity === 1
+  ) {
     return INVENTORY_UNIT_LABELS[
       unit
     ]
@@ -126,26 +128,43 @@ function getUnitLabel(
 }
 
 function getCurrentDateTimeLocal() {
-  const now = new Date()
+  const now =
+    new Date()
 
   const year =
     now.getFullYear()
 
-  const month = String(
-    now.getMonth() + 1,
-  ).padStart(2, '0')
+  const month =
+    String(
+      now.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    )
 
-  const day = String(
-    now.getDate(),
-  ).padStart(2, '0')
+  const day =
+    String(
+      now.getDate(),
+    ).padStart(
+      2,
+      '0',
+    )
 
-  const hours = String(
-    now.getHours(),
-  ).padStart(2, '0')
+  const hours =
+    String(
+      now.getHours(),
+    ).padStart(
+      2,
+      '0',
+    )
 
-  const minutes = String(
-    now.getMinutes(),
-  ).padStart(2, '0')
+  const minutes =
+    String(
+      now.getMinutes(),
+    ).padStart(
+      2,
+      '0',
+    )
 
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
@@ -159,20 +178,23 @@ export function InventoryPurchasePage() {
   ] = useSearchParams()
 
   const productFromUrl =
-    searchParams.get('product')
+    searchParams.get(
+      'product',
+    )
 
   const [
     products,
     setProducts,
-  ] = useState<InventoryItem[]>(
-    [],
-  )
+  ] = useState<
+    InventoryItem[]
+  >([])
 
   const [
     selectedProductId,
     setSelectedProductId,
   ] = useState(
-    productFromUrl ?? '',
+    productFromUrl ??
+    '',
   )
 
   const [
@@ -225,23 +247,28 @@ export function InventoryPurchasePage() {
   const [
     error,
     setError,
-  ] = useState<string | null>(
-    null,
-  )
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadProducts() {
       try {
         const data =
           await getActiveInventoryItems()
 
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
-        setProducts(data)
+        setProducts(
+          data,
+        )
 
         const productExists =
           productFromUrl &&
@@ -251,7 +278,9 @@ export function InventoryPurchasePage() {
               productFromUrl,
           )
 
-        if (productExists) {
+        if (
+          productExists
+        ) {
           setSelectedProductId(
             productFromUrl,
           )
@@ -267,7 +296,9 @@ export function InventoryPurchasePage() {
           )
         }
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -276,10 +307,16 @@ export function InventoryPurchasePage() {
             ? error.message
             : 'Não foi possível carregar os produtos.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoading(false)
+        if (
+          isMounted
+        ) {
+          setLoading(
+            false,
+          )
         }
       }
     }
@@ -287,9 +324,12 @@ export function InventoryPurchasePage() {
     loadProducts()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
-  }, [productFromUrl])
+  }, [
+    productFromUrl,
+  ])
 
   const selectedProduct =
     useMemo(
@@ -298,7 +338,8 @@ export function InventoryPurchasePage() {
           (product) =>
             product.id ===
             selectedProductId,
-        ) ?? null,
+        ) ??
+        null,
       [
         products,
         selectedProductId,
@@ -306,15 +347,23 @@ export function InventoryPurchasePage() {
     )
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadCurrentStock() {
-      if (!selectedProduct) {
-        setCurrentStock(0)
+      if (
+        !selectedProduct
+      ) {
+        setCurrentStock(
+          0,
+        )
+
         return
       }
 
-      setLoadingStock(true)
+      setLoadingStock(
+        true,
+      )
 
       try {
         const stock =
@@ -322,11 +371,17 @@ export function InventoryPurchasePage() {
             selectedProduct.id,
           )
 
-        if (isMounted) {
-          setCurrentStock(stock)
+        if (
+          isMounted
+        ) {
+          setCurrentStock(
+            stock,
+          )
         }
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -335,10 +390,16 @@ export function InventoryPurchasePage() {
             ? error.message
             : 'Não foi possível consultar o saldo do produto.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoadingStock(false)
+        if (
+          isMounted
+        ) {
+          setLoadingStock(
+            false,
+          )
         }
       }
     }
@@ -346,16 +407,23 @@ export function InventoryPurchasePage() {
     loadCurrentStock()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
-  }, [selectedProduct])
+  }, [
+    selectedProduct,
+  ])
 
   const filteredProducts =
     useMemo(() => {
       const normalizedSearch =
-        normalizeText(search)
+        normalizeText(
+          search,
+        )
 
-      if (!normalizedSearch) {
+      if (
+        !normalizedSearch
+      ) {
         return products
       }
 
@@ -399,7 +467,9 @@ export function InventoryPurchasePage() {
         parseQuantity(
           quantity,
         ),
-      [quantity],
+      [
+        quantity,
+      ],
     )
 
   const stockQuantity =
@@ -449,9 +519,13 @@ export function InventoryPurchasePage() {
   ) {
     event.preventDefault()
 
-    setError(null)
+    setError(
+      null,
+    )
 
-    if (!selectedProduct) {
+    if (
+      !selectedProduct
+    ) {
       setError(
         'Selecione o produto da compra.',
       )
@@ -469,7 +543,33 @@ export function InventoryPurchasePage() {
       return
     }
 
-    if (!movementAt) {
+    if (
+      unitCost <= 0
+    ) {
+      setError(
+        `Informe o valor pago por ${
+          INVENTORY_UNIT_LABELS[
+            purchaseUnit
+          ]
+        }.`,
+      )
+
+      return
+    }
+
+    if (
+      totalCost <= 0
+    ) {
+      setError(
+        'O valor total da compra precisa ser maior que zero.',
+      )
+
+      return
+    }
+
+    if (
+      !movementAt
+    ) {
       setError(
         'Informe a data e o horário da compra.',
       )
@@ -478,7 +578,9 @@ export function InventoryPurchasePage() {
     }
 
     const movementDate =
-      new Date(movementAt)
+      new Date(
+        movementAt,
+      )
 
     if (
       Number.isNaN(
@@ -492,7 +594,9 @@ export function InventoryPurchasePage() {
       return
     }
 
-    setSaving(true)
+    setSaving(
+      true,
+    )
 
     try {
       await createInventoryMovement({
@@ -505,10 +609,7 @@ export function InventoryPurchasePage() {
         quantity:
           stockQuantity,
 
-        unitCost:
-          unitCost > 0
-            ? unitCost
-            : null,
+        unitCost,
 
         notes:
           notes.trim() ||
@@ -533,16 +634,22 @@ export function InventoryPurchasePage() {
         totalCost,
       })
 
-      navigate('/estoque')
+      navigate(
+        '/estoque',
+      )
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Não foi possível registrar a compra.'
 
-      setError(message)
+      setError(
+        message,
+      )
     } finally {
-      setSaving(false)
+      setSaving(
+        false,
+      )
     }
   }
 
@@ -553,7 +660,10 @@ export function InventoryPurchasePage() {
           className="inventory-purchase-header__back"
           to="/estoque"
         >
-          <ArrowLeft size={17} />
+          <ArrowLeft
+            size={17}
+          />
+
           Voltar ao estoque
         </Link>
 
@@ -567,15 +677,18 @@ export function InventoryPurchasePage() {
           </h1>
 
           <p className="page-header__description">
-            Escolha o produto, informe a quantidade comprada e deixe o sistema
-            fazer a conversão do estoque automaticamente.
+            Escolha o produto, informe a compra uma única vez e deixe o sistema
+            atualizar o estoque e registrar a despesa no financeiro
+            automaticamente.
           </p>
         </div>
       </header>
 
       <form
         className="inventory-purchase-form"
-        onSubmit={handleSubmit}
+        onSubmit={
+          handleSubmit
+        }
       >
         <div className="inventory-purchase-section">
           <div className="inventory-purchase-section__heading">
@@ -601,7 +714,8 @@ export function InventoryPurchasePage() {
             <div className="inventory-purchase-state">
               Carregando produtos...
             </div>
-          ) : products.length === 0 ? (
+          ) : products.length ===
+            0 ? (
             <div className="inventory-purchase-empty">
               <strong>
                 Nenhum produto cadastrado
@@ -614,7 +728,10 @@ export function InventoryPurchasePage() {
               <Link
                 to="/estoque/produtos/novo"
               >
-                <PackagePlus size={16} />
+                <PackagePlus
+                  size={16}
+                />
+
                 Cadastrar produto
               </Link>
             </div>
@@ -628,8 +745,12 @@ export function InventoryPurchasePage() {
 
                 <input
                   type="search"
-                  value={search}
-                  onChange={(event) =>
+                  value={
+                    search
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setSearch(
                       event.target.value,
                     )
@@ -641,7 +762,9 @@ export function InventoryPurchasePage() {
 
               <div className="inventory-purchase-products">
                 {filteredProducts.map(
-                  (product) => {
+                  (
+                    product,
+                  ) => {
                     const isSelected =
                       product.id ===
                       selectedProductId
@@ -654,7 +777,9 @@ export function InventoryPurchasePage() {
                             ? 'inventory-purchase-product--selected'
                             : ''
                         }`}
-                        key={product.id}
+                        key={
+                          product.id
+                        }
                         onClick={() =>
                           handleSelectProduct(
                             product.id,
@@ -671,7 +796,9 @@ export function InventoryPurchasePage() {
                           </span>
 
                           <strong>
-                            {product.name}
+                            {
+                              product.name
+                            }
                           </strong>
                         </div>
 
@@ -708,7 +835,9 @@ export function InventoryPurchasePage() {
 
                         <div className="inventory-purchase-product__check">
                           {isSelected && (
-                            <Check size={16} />
+                            <Check
+                              size={16}
+                            />
                           )}
                         </div>
                       </button>
@@ -752,8 +881,12 @@ export function InventoryPurchasePage() {
                     id="quantity"
                     type="text"
                     inputMode="decimal"
-                    value={quantity}
-                    onChange={(event) =>
+                    value={
+                      quantity
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setQuantity(
                         event.target.value,
                       )
@@ -772,24 +905,24 @@ export function InventoryPurchasePage() {
 
                 {selectedProduct.packageSize &&
                   selectedProduct.purchaseUnit && (
-                  <small>
-                    Cada{' '}
-                    {
-                      INVENTORY_UNIT_LABELS[
-                        selectedProduct.purchaseUnit
-                      ]
-                    }{' '}
-                    possui{' '}
-                    {formatQuantity(
-                      selectedProduct.packageSize,
-                    )}{' '}
-                    {
-                      INVENTORY_UNIT_LABELS[
-                        selectedProduct.unit
-                      ]
-                    }.
-                  </small>
-                )}
+                    <small>
+                      Cada{' '}
+                      {
+                        INVENTORY_UNIT_LABELS[
+                          selectedProduct.purchaseUnit
+                        ]
+                      }{' '}
+                      possui{' '}
+                      {formatQuantity(
+                        selectedProduct.packageSize,
+                      )}{' '}
+                      {
+                        INVENTORY_UNIT_LABELS[
+                          selectedProduct.unit
+                        ]
+                      }.
+                    </small>
+                  )}
               </div>
 
               <div className="inventory-purchase-field">
@@ -804,11 +937,18 @@ export function InventoryPurchasePage() {
 
                 <MoneyInput
                   id="unitCost"
-                  value={unitCost}
+                  value={
+                    unitCost
+                  }
                   onChange={
                     setUnitCost
                   }
                 />
+
+                <small>
+                  Esse valor também será utilizado para registrar a despesa no
+                  Financeiro.
+                </small>
               </div>
 
               <div className="inventory-purchase-field">
@@ -819,8 +959,12 @@ export function InventoryPurchasePage() {
                 <input
                   id="movementAt"
                   type="datetime-local"
-                  value={movementAt}
-                  onChange={(event) =>
+                  value={
+                    movementAt
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setMovementAt(
                       event.target.value,
                     )
@@ -835,8 +979,12 @@ export function InventoryPurchasePage() {
 
                 <textarea
                   id="notes"
-                  value={notes}
-                  onChange={(event) =>
+                  value={
+                    notes
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setNotes(
                       event.target.value,
                     )
@@ -935,7 +1083,9 @@ export function InventoryPurchasePage() {
               !selectedProduct
             }
           >
-            <ArrowDown size={16} />
+            <ArrowDown
+              size={16}
+            />
 
             {saving
               ? 'Registrando...'

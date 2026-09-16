@@ -30,7 +30,9 @@ import './HorsesPage.css'
 function formatMonthlyFee(
   value: number | null,
 ) {
-  if (value === null) {
+  if (
+    value === null
+  ) {
     return 'Não informada'
   }
 
@@ -40,13 +42,16 @@ function formatMonthlyFee(
       style: 'currency',
       currency: 'BRL',
     },
-  ).format(value)
+  ).format(
+    value,
+  )
 }
 
 function getSexLabel(
   sex: HorseListItem['sex'],
 ) {
-  return sex === 'male'
+  return sex ===
+    'male'
     ? 'Macho'
     : 'Fêmea'
 }
@@ -68,9 +73,9 @@ export function HorsesPage() {
   const [
     horses,
     setHorses,
-  ] = useState<HorseListItem[]>(
-    [],
-  )
+  ] = useState<
+    HorseListItem[]
+  >([])
 
   const [
     search,
@@ -85,23 +90,30 @@ export function HorsesPage() {
   const [
     error,
     setError,
-  ] = useState<string | null>(
-    null,
-  )
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadHorses() {
       try {
         const data =
           await getHorses()
 
-        if (isMounted) {
-          setHorses(data)
+        if (
+          isMounted
+        ) {
+          setHorses(
+            data,
+          )
         }
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -110,10 +122,16 @@ export function HorsesPage() {
             ? error.message
             : 'Não foi possível carregar os cavalos.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoading(false)
+        if (
+          isMounted
+        ) {
+          setLoading(
+            false,
+          )
         }
       }
     }
@@ -121,27 +139,35 @@ export function HorsesPage() {
     loadHorses()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
   }, [])
 
   const filteredHorses =
     useMemo(() => {
       const normalizedSearch =
-        normalizeText(search)
+        normalizeText(
+          search,
+        )
 
-      if (!normalizedSearch) {
+      if (
+        !normalizedSearch
+      ) {
         return horses
       }
 
       return horses.filter(
         (horse) => {
-          const searchableContent = [
-            horse.name,
-            horse.breed ?? '',
-            horse.clientName,
-            horse.stallName ?? '',
-          ]
+          const searchableContent =
+            [
+              horse.name,
+              horse.breed ??
+                '',
+              horse.clientName,
+              horse.stallName ??
+                '',
+            ]
 
           return searchableContent.some(
             (value) =>
@@ -159,7 +185,8 @@ export function HorsesPage() {
     ])
 
   const horseCountLabel =
-    horses.length === 1
+    horses.length ===
+    1
       ? '1 cavalo cadastrado'
       : `${horses.length} cavalos cadastrados`
 
@@ -193,8 +220,12 @@ export function HorsesPage() {
 
             <input
               type="search"
-              value={search}
-              onChange={(event) =>
+              value={
+                search
+              }
+              onChange={(
+                event,
+              ) =>
                 setSearch(
                   event.target.value,
                 )
@@ -220,7 +251,10 @@ export function HorsesPage() {
             className="horses-add-button"
             to="/cavalos/novo"
           >
-            <Plus size={17} />
+            <Plus
+              size={17}
+            />
+
             Novo cavalo
           </Link>
         </div>
@@ -240,7 +274,8 @@ export function HorsesPage() {
 
       {!loading &&
         !error &&
-        horses.length === 0 && (
+        horses.length ===
+          0 && (
           <div className="horses-empty">
             <strong>
               Nenhum cavalo cadastrado
@@ -255,7 +290,10 @@ export function HorsesPage() {
               className="horses-add-button"
               to="/cavalos/novo"
             >
-              <Plus size={17} />
+              <Plus
+                size={17}
+              />
+
               Novo cavalo
             </Link>
           </div>
@@ -263,8 +301,10 @@ export function HorsesPage() {
 
       {!loading &&
         !error &&
-        horses.length > 0 &&
-        filteredHorses.length === 0 && (
+        horses.length >
+          0 &&
+        filteredHorses.length ===
+          0 && (
           <div className="horses-state">
             Nenhum cavalo encontrado para “{search}”.
           </div>
@@ -272,13 +312,16 @@ export function HorsesPage() {
 
       {!loading &&
         !error &&
-        filteredHorses.length > 0 && (
+        filteredHorses.length >
+          0 && (
           <div className="horses-grid">
             {filteredHorses.map(
               (horse) => (
                 <article
                   className="horse-card"
-                  key={horse.id}
+                  key={
+                    horse.id
+                  }
                 >
                   <div className="horse-card__header">
                     <div>
@@ -326,7 +369,9 @@ export function HorsesPage() {
                         </span>
 
                         <strong>
-                          {horse.clientName}
+                          {
+                            horse.clientName
+                          }
                         </strong>
                       </div>
                     </div>
@@ -384,6 +429,18 @@ export function HorsesPage() {
                       />
 
                       Plano alimentar
+                    </Link>
+
+                    <Link
+                      className="horse-card__feeding"
+                      to={`/cavalos/${horse.id}/mensalidade`}
+                    >
+                      <CircleDollarSign
+                        size={15}
+                        strokeWidth={1.8}
+                      />
+
+                      Editar mensalidade
                     </Link>
                   </div>
                 </article>

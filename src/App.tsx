@@ -61,6 +61,10 @@ import {
 } from './features/finance/FinancePage.tsx'
 
 import {
+  EditHorseMonthlyFeePage,
+} from './features/horses/EditHorseMonthlyFeePage.tsx'
+
+import {
   HorsesPage,
 } from './features/horses/HorsesPage.tsx'
 
@@ -111,108 +115,159 @@ function App() {
     <Routes>
       <Route
         path="/login"
-        element={<LoginPage />}
+        element={
+          <LoginPage />
+        }
       />
 
       <Route
-        element={<ProtectedRoute />}
+        element={
+          <ProtectedRoute />
+        }
       >
         <Route
-          element={<AppLayout />}
+          element={
+            <AppLayout />
+          }
         >
           <Route
             path="/"
-            element={<DashboardPage />}
+            element={
+              <DashboardPage />
+            }
           />
 
           <Route
             path="/cavalos"
-            element={<HorsesPage />}
+            element={
+              <HorsesPage />
+            }
           />
 
           <Route
             path="/cavalos/novo"
-            element={<NewHorsesPage />}
+            element={
+              <NewHorsesPage />
+            }
           />
 
           <Route
             path="/cavalos/alimentacao-hoje"
-            element={<DailyFeedingPage />}
+            element={
+              <DailyFeedingPage />
+            }
           />
 
           <Route
             path="/cavalos/:horseId/alimentacao"
-            element={<FeedingPlanPage />}
+            element={
+              <FeedingPlanPage />
+            }
+          />
+
+          <Route
+            path="/cavalos/:horseId/mensalidade"
+            element={
+              <EditHorseMonthlyFeePage />
+            }
           />
 
           <Route
             path="/baias"
-            element={<StallsPage />}
+            element={
+              <StallsPage />
+            }
           />
 
           <Route
             path="/baias/nova"
-            element={<NewStallPage />}
+            element={
+              <NewStallPage />
+            }
           />
 
           <Route
             path="/baias/:stallId/gerenciar"
-            element={<ManageStallPage />}
+            element={
+              <ManageStallPage />
+            }
           />
 
           <Route
             path="/agenda"
-            element={<AgendaPage />}
+            element={
+              <AgendaPage />
+            }
           />
 
           <Route
             path="/agenda/novo"
-            element={<NewAppointmentPage />}
+            element={
+              <NewAppointmentPage />
+            }
           />
 
           <Route
             path="/agenda/:appointmentId/editar"
-            element={<EditAppointmentPage />}
+            element={
+              <EditAppointmentPage />
+            }
           />
 
           <Route
             path="/agenda/profissionais"
-            element={<ProfessionalsPage />}
+            element={
+              <ProfessionalsPage />
+            }
           />
 
           <Route
             path="/agenda/profissionais/novo"
-            element={<NewProfessionalPage />}
+            element={
+              <NewProfessionalPage />
+            }
           />
 
           <Route
             path="/clientes"
-            element={<ClientsPage />}
+            element={
+              <ClientsPage />
+            }
           />
 
           <Route
             path="/clientes/novo"
-            element={<NewClientPage />}
+            element={
+              <NewClientPage />
+            }
           />
 
           <Route
             path="/estoque"
-            element={<InventoryPage />}
+            element={
+              <InventoryPage />
+            }
           />
 
           <Route
             path="/estoque/compra"
-            element={<InventoryPurchasePage />}
+            element={
+              <InventoryPurchasePage />
+            }
           />
 
           <Route
             path="/estoque/produtos"
-            element={<ProductsPage />}
+            element={
+              <ProductsPage />
+            }
           />
 
           <Route
             path="/estoque/produtos/novo"
-            element={<NewProductPage />}
+            element={
+              <NewProductPage />
+            }
           />
 
           <Route
@@ -227,17 +282,23 @@ function App() {
 
           <Route
             path="/estoque/:itemId/movimentar"
-            element={<InventoryMovementPage />}
+            element={
+              <InventoryMovementPage />
+            }
           />
 
           <Route
             path="/financeiro"
-            element={<FinancePage />}
+            element={
+              <FinancePage />
+            }
           />
 
           <Route
             path="/configuracoes"
-            element={<SettingsPage />}
+            element={
+              <SettingsPage />
+            }
           />
         </Route>
       </Route>
