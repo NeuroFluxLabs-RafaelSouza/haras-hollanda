@@ -3,16 +3,23 @@ import {
   useEffect,
   useMemo,
   useState,
+  type SubmitEvent,
 } from 'react'
 
 import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
+  Plus,
   ReceiptText,
   TrendingDown,
   WalletCards,
+  X,
 } from 'lucide-react'
+
+import {
+  MoneyInput,
+} from '../../components/ui/MoneyInput.tsx'
 
 import type {
   FinancialChargeListItem,
@@ -22,6 +29,7 @@ import type {
 
 import {
   confirmMonthlyFinancialCharge,
+  createManualFinancialExpense,
   loadFinancialMonth,
 } from './financeService.ts'
 
@@ -43,6 +51,32 @@ function getCurrentCompetence() {
     )
 
   return `${year}-${month}-01`
+}
+
+function getCurrentDateInputValue() {
+  const today =
+    new Date()
+
+  const year =
+    today.getFullYear()
+
+  const month =
+    String(
+      today.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    )
+
+  const day =
+    String(
+      today.getDate(),
+    ).padStart(
+      2,
+      '0',
+    )
+
+  return `${year}-${month}-${day}`
 }
 
 function formatCurrency(
@@ -79,7 +113,8 @@ function formatCompetence(
     new Intl.DateTimeFormat(
       'pt-BR',
       {
-        month: 'long',
+        month:
+          'long',
       },
     ).format(
       new Date(
@@ -106,11 +141,20 @@ function formatDateTime(
   return new Intl.DateTimeFormat(
     'pt-BR',
     {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      day:
+        '2-digit',
+
+      month:
+        '2-digit',
+
+      year:
+        'numeric',
+
+      hour:
+        '2-digit',
+
+      minute:
+        '2-digit',
     },
   ).format(
     new Date(
@@ -175,6 +219,9 @@ export function FinancePage() {
   const competence =
     getCurrentCompetence()
 
+  const today =
+    getCurrentDateInputValue()
+
   const [
     summary,
     setSummary,
@@ -223,6 +270,48 @@ export function FinancePage() {
   ] = useState<
     string | null
   >(null)
+
+  const [
+    expenseFormOpen,
+    setExpenseFormOpen,
+  ] = useState(
+    false,
+  )
+
+  const [
+    expenseDescription,
+    setExpenseDescription,
+  ] = useState(
+    '',
+  )
+
+  const [
+    expenseAmount,
+    setExpenseAmount,
+  ] = useState(
+    0,
+  )
+
+  const [
+    expenseDate,
+    setExpenseDate,
+  ] = useState(
+    today,
+  )
+
+  const [
+    expenseNotes,
+    setExpenseNotes,
+  ] = useState(
+    '',
+  )
+
+  const [
+    savingExpense,
+    setSavingExpense,
+  ] = useState(
+    false,
+  )
 
   const loadFinance =
     useCallback(
@@ -360,6 +449,162 @@ export function FinancePage() {
       ],
     )
 
+  function handleToggleExpenseForm() {
+    setExpenseFormOpen(
+      (
+        currentValue,
+      ) =>
+        !currentValue,
+    )
+
+    setError(
+      null,
+    )
+
+    setSuccessMessage(
+      null,
+    )
+  }
+
+  async function handleCreateExpense(
+    event: SubmitEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault()
+
+    const description =
+      expenseDescription.trim()
+
+    if (!description) {
+      setError(
+        'Informe a descrição da despesa.',
+      )
+
+      return
+    }
+
+    if (
+      !Number.isFinite(
+        expenseAmount,
+      ) ||
+      expenseAmount <=
+        0
+    ) {
+      setError(
+        'Informe um valor de despesa maior que zero.',
+      )
+
+      return
+    }
+
+    if (!expenseDate) {
+      setError(
+        'Informe a data da despesa.',
+      )
+
+      return
+    }
+
+    if (
+      expenseDate.slice(
+        0,
+        7,
+      ) !==
+      competence.slice(
+        0,
+        7,
+      )
+    ) {
+      setError(
+        'A despesa precisa pertencer à competência atual.',
+      )
+
+      return
+    }
+
+    if (
+      expenseDate >
+      today
+    ) {
+      setError(
+        'A data da despesa não pode estar no futuro.',
+      )
+
+      return
+    }
+
+    try {
+      setSavingExpense(
+        true,
+      )
+
+      setError(
+        null,
+      )
+
+      setSuccessMessage(
+        null,
+      )
+
+      const occurredAt =
+        new Date(
+          `${expenseDate}T12:00:00`,
+        ).toISOString()
+
+      await createManualFinancialExpense({
+        description,
+
+        amount:
+          expenseAmount,
+
+        occurredAt,
+
+        notes:
+          expenseNotes,
+      })
+
+      setExpenseDescription(
+        '',
+      )
+
+      setExpenseAmount(
+        0,
+      )
+
+      setExpenseDate(
+        today,
+      )
+
+      setExpenseNotes(
+        '',
+      )
+
+      setExpenseFormOpen(
+        false,
+      )
+
+      setSuccessMessage(
+        `Despesa de ${formatCurrency(
+          expenseAmount,
+        )} registrada como "${description}".`,
+      )
+
+      await loadFinance()
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível registrar a despesa.'
+
+      setError(
+        message,
+      )
+    } finally {
+      setSavingExpense(
+        false,
+      )
+    }
+  }
+
   async function handleConfirmPayment(
     charge: FinancialChargeListItem,
   ) {
@@ -430,7 +675,7 @@ export function FinancePage() {
       </header>
 
       <div className="finance-period">
-        <div>
+        <div className="finance-period__competence">
           <span className="finance-period__eyebrow">
             Competência atual
           </span>
@@ -442,10 +687,188 @@ export function FinancePage() {
           </strong>
         </div>
 
-        <span className="finance-period__note">
-          As mensalidades são preparadas automaticamente.
-        </span>
+        <div className="finance-period__actions">
+          <span className="finance-period__note">
+            As mensalidades são preparadas automaticamente.
+          </span>
+
+          <button
+            className="finance-new-expense-button"
+            type="button"
+            onClick={
+              handleToggleExpenseForm
+            }
+          >
+            {expenseFormOpen ? (
+              <X
+                size={16}
+                strokeWidth={1.8}
+              />
+            ) : (
+              <Plus
+                size={16}
+                strokeWidth={1.8}
+              />
+            )}
+
+            {expenseFormOpen
+              ? 'Fechar'
+              : 'Nova despesa'}
+          </button>
+        </div>
       </div>
+
+      {expenseFormOpen && (
+        <section className="finance-expense-panel">
+          <div className="finance-expense-panel__header">
+            <div>
+              <span>
+                Saída de caixa
+              </span>
+
+              <h2>
+                Registrar despesa
+              </h2>
+            </div>
+
+            <p>
+              Use este lançamento para despesas que não são compras de estoque.
+            </p>
+          </div>
+
+          <form
+            className="finance-expense-form"
+            onSubmit={
+              handleCreateExpense
+            }
+          >
+            <div className="finance-expense-field finance-expense-field--wide">
+              <label htmlFor="expenseDescription">
+                Descrição
+              </label>
+
+              <input
+                id="expenseDescription"
+                name="expenseDescription"
+                type="text"
+                value={
+                  expenseDescription
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setExpenseDescription(
+                    event.target.value,
+                  )
+                }
+                placeholder="Ex: Ferrageamento do Apache"
+                autoComplete="off"
+                required
+              />
+            </div>
+
+            <div className="finance-expense-field">
+              <label htmlFor="expenseAmount">
+                Valor pago
+              </label>
+
+              <MoneyInput
+                id="expenseAmount"
+                name="expenseAmount"
+                value={
+                  expenseAmount
+                }
+                onChange={
+                  setExpenseAmount
+                }
+              />
+
+              <span>
+                Digite como em um PIX.
+              </span>
+            </div>
+
+            <div className="finance-expense-field">
+              <label htmlFor="expenseDate">
+                Data do pagamento
+              </label>
+
+              <input
+                id="expenseDate"
+                name="expenseDate"
+                type="date"
+                min={
+                  competence
+                }
+                max={
+                  today
+                }
+                value={
+                  expenseDate
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setExpenseDate(
+                    event.target.value,
+                  )
+                }
+                required
+              />
+            </div>
+
+            <div className="finance-expense-field finance-expense-field--wide">
+              <label htmlFor="expenseNotes">
+                Observação
+              </label>
+
+              <textarea
+                id="expenseNotes"
+                name="expenseNotes"
+                value={
+                  expenseNotes
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setExpenseNotes(
+                    event.target.value,
+                  )
+                }
+                placeholder="Opcional"
+                rows={3}
+              />
+            </div>
+
+            <div className="finance-expense-form__actions">
+              <button
+                className="finance-expense-cancel"
+                type="button"
+                onClick={
+                  handleToggleExpenseForm
+                }
+                disabled={
+                  savingExpense
+                }
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="finance-expense-submit"
+                type="submit"
+                disabled={
+                  savingExpense
+                }
+              >
+                {savingExpense
+                  ? 'Registrando...'
+                  : 'Registrar despesa'}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       {error && (
         <div className="finance-message finance-message--error">
@@ -475,7 +898,7 @@ export function FinancePage() {
 
           <div>
             <strong>
-              Recebimento registrado
+              Operação registrada
             </strong>
 
             <span>
@@ -818,7 +1241,7 @@ export function FinancePage() {
               </strong>
 
               <span>
-                Os recebimentos confirmados aparecerão aqui automaticamente.
+                Recebimentos e despesas aparecerão aqui automaticamente.
               </span>
             </div>
           )}

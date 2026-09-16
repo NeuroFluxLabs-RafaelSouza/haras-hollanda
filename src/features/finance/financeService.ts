@@ -48,6 +48,7 @@ type FinancialChargeListRow =
 
 type FinancialTransactionRow = {
   id: string
+
   transaction_type:
     FinancialTransaction['transactionType']
 
@@ -84,6 +85,13 @@ type FinancialMonthSummaryRow = {
   expense_amount: number | string
   balance_amount: number | string
   pending_charges_count: number | string
+}
+
+export type CreateManualFinancialExpenseInput = {
+  description: string
+  amount: number
+  occurredAt: string
+  notes?: string
 }
 
 const financialChargeSelect = `
@@ -469,7 +477,8 @@ export async function getFinancialChargesByMonth(
     .order(
       'created_at',
       {
-        ascending: true,
+        ascending:
+          true,
       },
     )
 
@@ -561,6 +570,98 @@ export async function confirmMonthlyFinancialCharge(
   )
 }
 
+export async function createManualFinancialExpense(
+  input: CreateManualFinancialExpenseInput,
+): Promise<FinancialTransaction> {
+  const description =
+    input.description.trim()
+
+  const notes =
+    input.notes?.trim() ||
+    null
+
+  if (!description) {
+    throw new Error(
+      'Informe a descrição da despesa.',
+    )
+  }
+
+  if (
+    !Number.isFinite(
+      input.amount,
+    ) ||
+    input.amount <=
+      0
+  ) {
+    throw new Error(
+      'Informe um valor de despesa maior que zero.',
+    )
+  }
+
+  const occurredAt =
+    new Date(
+      input.occurredAt,
+    )
+
+  if (
+    Number.isNaN(
+      occurredAt.getTime(),
+    )
+  ) {
+    throw new Error(
+      'Informe uma data válida para a despesa.',
+    )
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      'financial_transactions',
+    )
+    .insert({
+      transaction_type:
+        'expense',
+
+      source_type:
+        'manual',
+
+      charge_id:
+        null,
+
+      horse_id:
+        null,
+
+      client_id:
+        null,
+
+      description,
+
+      amount:
+        input.amount,
+
+      occurred_at:
+        input.occurredAt,
+
+      notes,
+    })
+    .select(
+      financialTransactionSelect,
+    )
+    .single()
+
+  if (error) {
+    throw new Error(
+      `Erro ao registrar despesa: ${error.message}`,
+    )
+  }
+
+  return mapFinancialTransaction(
+    data as FinancialTransactionRow,
+  )
+}
+
 export async function getFinancialMonthSummary(
   competenceMonth: string,
 ): Promise<FinancialMonthSummary> {
@@ -636,7 +737,8 @@ export async function getFinancialTransactionsByMonth(
     .order(
       'occurred_at',
       {
-        ascending: false,
+        ascending:
+          false,
       },
     )
 

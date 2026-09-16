@@ -11,12 +11,15 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
-  PawPrint,
 } from 'lucide-react'
 
 import {
   Link,
 } from 'react-router-dom'
+
+import {
+  HorseshoeIcon,
+} from '../../components/ui/HorseshoeIcon.tsx'
 
 import type {
   DailyFeedingRoutineItem,
@@ -412,7 +415,7 @@ export function Dashboard() {
           >
             <div className="dashboard-operation-card__top">
               <div className="dashboard-operation-card__icon">
-                <PawPrint
+                <HorseshoeIcon
                   size={20}
                   strokeWidth={1.8}
                 />

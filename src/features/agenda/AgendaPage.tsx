@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  PawPrint,
   Pencil,
   Plus,
   UserRound,
@@ -22,6 +21,10 @@ import {
   Link,
   useSearchParams,
 } from 'react-router-dom'
+
+import {
+  HorseshoeIcon,
+} from '../../components/ui/HorseshoeIcon.tsx'
 
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -46,7 +49,11 @@ function formatDateLabel(
       month: 'long',
       year: 'numeric',
     },
-  ).format(new Date(scheduledAt))
+  ).format(
+    new Date(
+      scheduledAt,
+    ),
+  )
 }
 
 function formatTime(
@@ -58,14 +65,20 @@ function formatTime(
       hour: '2-digit',
       minute: '2-digit',
     },
-  ).format(new Date(scheduledAt))
+  ).format(
+    new Date(
+      scheduledAt,
+    ),
+  )
 }
 
 function getDateKey(
   scheduledAt: string,
 ) {
   const date =
-    new Date(scheduledAt)
+    new Date(
+      scheduledAt,
+    )
 
   const year =
     date.getFullYear()
@@ -73,12 +86,18 @@ function getDateKey(
   const month =
     String(
       date.getMonth() + 1,
-    ).padStart(2, '0')
+    ).padStart(
+      2,
+      '0',
+    )
 
   const day =
     String(
       date.getDate(),
-    ).padStart(2, '0')
+    ).padStart(
+      2,
+      '0',
+    )
 
   return `${year}-${month}-${day}`
 }
@@ -96,36 +115,51 @@ export function AgendaPage() {
   const [
     appointments,
     setAppointments,
-  ] = useState<AppointmentListItem[]>([])
+  ] = useState<
+    AppointmentListItem[]
+  >([])
 
   const [
     loading,
     setLoading,
-  ] = useState(true)
+  ] = useState(
+    true,
+  )
 
   const [
     error,
     setError,
-  ] = useState<string | null>(null)
+  ] = useState<
+    string | null
+  >(null)
 
   const [
     updatingAppointmentId,
     setUpdatingAppointmentId,
-  ] = useState<string | null>(null)
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadAppointments() {
       try {
         const data =
           await getAppointments()
 
-        if (isMounted) {
-          setAppointments(data)
+        if (
+          isMounted
+        ) {
+          setAppointments(
+            data,
+          )
         }
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -134,10 +168,16 @@ export function AgendaPage() {
             ? error.message
             : 'Não foi possível carregar a agenda.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoading(false)
+        if (
+          isMounted
+        ) {
+          setLoading(
+            false,
+          )
         }
       }
     }
@@ -145,7 +185,8 @@ export function AgendaPage() {
     loadAppointments()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
   }, [])
 
@@ -162,7 +203,9 @@ export function AgendaPage() {
         `appointment-${selectedAppointmentId}`,
       )
 
-    if (!selectedElement) {
+    if (
+      !selectedElement
+    ) {
       return
     }
 
@@ -170,8 +213,11 @@ export function AgendaPage() {
       window.setTimeout(
         () => {
           selectedElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
+            behavior:
+              'smooth',
+
+            block:
+              'center',
           })
         },
         100,
@@ -190,20 +236,26 @@ export function AgendaPage() {
 
   const groupedAppointments =
     useMemo(() => {
-      const groups = new Map<
-        string,
-        AppointmentListItem[]
-      >()
+      const groups =
+        new Map<
+          string,
+          AppointmentListItem[]
+        >()
 
       appointments.forEach(
-        (appointment) => {
+        (
+          appointment,
+        ) => {
           const key =
             getDateKey(
               appointment.scheduledAt,
             )
 
           const existing =
-            groups.get(key) ?? []
+            groups.get(
+              key,
+            ) ??
+            []
 
           existing.push(
             appointment,
@@ -219,12 +271,16 @@ export function AgendaPage() {
       return Array.from(
         groups.entries(),
       )
-    }, [appointments])
+    }, [
+      appointments,
+    ])
 
   async function handleComplete(
     appointmentId: string,
   ) {
-    setError(null)
+    setError(
+      null,
+    )
 
     setUpdatingAppointmentId(
       appointmentId,
@@ -237,14 +293,19 @@ export function AgendaPage() {
       )
 
       setAppointments(
-        (currentAppointments) =>
+        (
+          currentAppointments,
+        ) =>
           currentAppointments.map(
-            (appointment) =>
+            (
+              appointment,
+            ) =>
               appointment.id ===
               appointmentId
                 ? {
                     ...appointment,
-                    status: 'completed',
+                    status:
+                      'completed',
                   }
                 : appointment,
           ),
@@ -255,14 +316,19 @@ export function AgendaPage() {
           ? error.message
           : 'Não foi possível concluir o compromisso.'
 
-      setError(message)
+      setError(
+        message,
+      )
     } finally {
-      setUpdatingAppointmentId(null)
+      setUpdatingAppointmentId(
+        null,
+      )
     }
   }
 
   const appointmentCountLabel =
-    appointments.length === 1
+    appointments.length ===
+    1
       ? '1 compromisso'
       : `${appointments.length} compromissos`
 
@@ -292,7 +358,10 @@ export function AgendaPage() {
             className="agenda-professionals-button"
             to="/agenda/profissionais"
           >
-            <UsersRound size={17} />
+            <UsersRound
+              size={17}
+            />
+
             Profissionais
           </Link>
 
@@ -300,7 +369,10 @@ export function AgendaPage() {
             className="agenda-add-button"
             to="/agenda/novo"
           >
-            <Plus size={17} />
+            <Plus
+              size={17}
+            />
+
             Novo compromisso
           </Link>
         </div>
@@ -320,7 +392,8 @@ export function AgendaPage() {
 
       {!loading &&
         !error &&
-        appointments.length === 0 && (
+        appointments.length ===
+          0 && (
           <div className="agenda-empty">
             <CalendarDays
               size={26}
@@ -339,13 +412,21 @@ export function AgendaPage() {
         )}
 
       {!loading &&
-        groupedAppointments.length > 0 && (
+        groupedAppointments.length >
+          0 && (
           <div className="agenda-groups">
             {groupedAppointments.map(
-              ([dateKey, items]) => (
+              (
+                [
+                  dateKey,
+                  items,
+                ],
+              ) => (
                 <section
                   className="agenda-group"
-                  key={dateKey}
+                  key={
+                    dateKey
+                  }
                 >
                   <div className="agenda-group__date">
                     <CalendarDays
@@ -362,7 +443,9 @@ export function AgendaPage() {
 
                   <div className="agenda-list">
                     {items.map(
-                      (appointment) => {
+                      (
+                        appointment,
+                      ) => {
                         const isSelected =
                           appointment.id ===
                           selectedAppointmentId
@@ -439,7 +522,7 @@ export function AgendaPage() {
                                 </div>
 
                                 <div className="agenda-item__info">
-                                  <PawPrint
+                                  <HorseshoeIcon
                                     size={15}
                                     strokeWidth={1.8}
                                   />
@@ -487,6 +570,7 @@ export function AgendaPage() {
                                 <Pencil
                                   size={15}
                                 />
+
                                 Editar
                               </Link>
 
