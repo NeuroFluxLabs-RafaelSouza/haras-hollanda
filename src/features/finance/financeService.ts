@@ -40,6 +40,11 @@ type ClientRelation = {
   name: string
 }
 
+type ProfessionalRelation = {
+  id: string
+  name: string
+}
+
 type FinancialChargeListRow =
   FinancialChargeRow & {
     horse: Relation<HorseRelation>
@@ -63,6 +68,19 @@ type FinancialTransactionRow = {
   occurred_at: string
   notes: string | null
   created_at: string
+}
+
+type AppointmentExpenseRow = {
+  id: string
+  title: string
+  scheduled_at: string
+  service_amount: number | string | null
+  horse: Relation<HorseRelation>
+  professional: Relation<ProfessionalRelation>
+}
+
+type AppointmentFinancialTransactionRow = {
+  appointment_id: string | null
 }
 
 type EnsureMonthlyChargesRow = {
@@ -92,6 +110,15 @@ export type CreateManualFinancialExpenseInput = {
   amount: number
   occurredAt: string
   notes?: string
+}
+
+export type PendingAppointmentExpense = {
+  appointmentId: string
+  title: string
+  scheduledAt: string
+  serviceAmount: number
+  horseName: string
+  professionalName: string | null
 }
 
 const financialChargeSelect = `
@@ -128,6 +155,21 @@ const financialTransactionSelect = `
   occurred_at,
   notes,
   created_at
+`
+
+const pendingAppointmentSelect = `
+  id,
+  title,
+  scheduled_at,
+  service_amount,
+  horse:horses (
+    id,
+    name
+  ),
+  professional:professionals (
+    id,
+    name
+  )
 `
 
 function getSingleRelation<T>(
@@ -190,7 +232,7 @@ function normalizeCompetenceMonth(
   )}-01`
 }
 
-function getNextMonth(
+function getMonthDateRange(
   competenceMonth: string,
 ) {
   const normalized =
@@ -211,23 +253,40 @@ function getNextMonth(
       yearText,
     )
 
-  const month =
+  const monthIndex =
     Number(
       monthText,
+    ) - 1
+
+  const start =
+    new Date(
+      year,
+      monthIndex,
+      1,
+      0,
+      0,
+      0,
+      0,
     )
 
-  if (
-    month === 12
-  ) {
-    return `${year + 1}-01-01`
-  }
+  const end =
+    new Date(
+      year,
+      monthIndex + 1,
+      1,
+      0,
+      0,
+      0,
+      0,
+    )
 
-  return `${year}-${String(
-    month + 1,
-  ).padStart(
-    2,
-    '0',
-  )}-01`
+  return {
+    start:
+      start.toISOString(),
+
+    end:
+      end.toISOString(),
+  }
 }
 
 function mapFinancialCharge(
@@ -706,14 +765,12 @@ export async function getFinancialMonthSummary(
 export async function getFinancialTransactionsByMonth(
   competenceMonth: string,
 ): Promise<FinancialTransaction[]> {
-  const monthStart =
-    normalizeCompetenceMonth(
+  const {
+    start,
+    end,
+  } =
+    getMonthDateRange(
       competenceMonth,
-    )
-
-  const nextMonth =
-    getNextMonth(
-      monthStart,
     )
 
   const {
@@ -728,11 +785,11 @@ export async function getFinancialTransactionsByMonth(
     )
     .gte(
       'occurred_at',
-      `${monthStart}T00:00:00.000Z`,
+      start,
     )
     .lt(
       'occurred_at',
-      `${nextMonth}T00:00:00.000Z`,
+      end,
     )
     .order(
       'occurred_at',
@@ -759,6 +816,157 @@ export async function getFinancialTransactionsByMonth(
   )
 }
 
+export async function getPendingAppointmentExpenses(): Promise<
+  PendingAppointmentExpense[]
+> {
+  const {
+    data: appointmentData,
+    error: appointmentError,
+  } = await supabase
+    .from(
+      'appointments',
+    )
+    .select(
+      pendingAppointmentSelect,
+    )
+    .eq(
+      'status',
+      'completed',
+    )
+    .not(
+      'service_amount',
+      'is',
+      null,
+    )
+    .gt(
+      'service_amount',
+      0,
+    )
+    .order(
+      'scheduled_at',
+      {
+        ascending:
+          true,
+      },
+    )
+
+  if (appointmentError) {
+    throw new Error(
+      `Erro ao buscar serviços aguardando pagamento: ${appointmentError.message}`,
+    )
+  }
+
+  const appointments =
+    (
+      appointmentData ??
+      []
+    ) as AppointmentExpenseRow[]
+
+  if (
+    appointments.length ===
+    0
+  ) {
+    return []
+  }
+
+  const appointmentIds =
+    appointments.map(
+      (appointment) =>
+        appointment.id,
+    )
+
+  const {
+    data: transactionData,
+    error: transactionError,
+  } = await supabase
+    .from(
+      'financial_transactions',
+    )
+    .select(
+      'appointment_id',
+    )
+    .eq(
+      'source_type',
+      'appointment',
+    )
+    .in(
+      'appointment_id',
+      appointmentIds,
+    )
+
+  if (transactionError) {
+    throw new Error(
+      `Erro ao verificar pagamentos da Agenda: ${transactionError.message}`,
+    )
+  }
+
+  const paidAppointmentIds =
+    new Set(
+      (
+        transactionData ??
+        []
+      )
+        .map(
+          (transaction) =>
+            (
+              transaction as AppointmentFinancialTransactionRow
+            ).appointment_id,
+        )
+        .filter(
+          (
+            appointmentId,
+          ): appointmentId is string =>
+            appointmentId !==
+            null,
+        ),
+    )
+
+  return appointments
+    .filter(
+      (appointment) =>
+        !paidAppointmentIds.has(
+          appointment.id,
+        ),
+    )
+    .map(
+      (appointment) => {
+        const horse =
+          getSingleRelation(
+            appointment.horse,
+          )
+
+        const professional =
+          getSingleRelation(
+            appointment.professional,
+          )
+
+        return {
+          appointmentId:
+            appointment.id,
+
+          title:
+            appointment.title,
+
+          scheduledAt:
+            appointment.scheduled_at,
+
+          serviceAmount:
+            Number(
+              appointment.service_amount,
+            ),
+
+          horseName:
+            horse?.name ??
+            'Cavalo não identificado',
+
+          professionalName:
+            professional?.name ??
+            null,
+        }
+      },
+    )
+}
+
 export async function loadFinancialMonth(
   competenceMonth: string,
 ) {
@@ -770,6 +978,7 @@ export async function loadFinancialMonth(
     summary,
     charges,
     transactions,
+    pendingAppointmentExpenses,
   ] = await Promise.all([
     getFinancialMonthSummary(
       competenceMonth,
@@ -782,11 +991,14 @@ export async function loadFinancialMonth(
     getFinancialTransactionsByMonth(
       competenceMonth,
     ),
+
+    getPendingAppointmentExpenses(),
   ])
 
   return {
     summary,
     charges,
     transactions,
+    pendingAppointmentExpenses,
   }
 }

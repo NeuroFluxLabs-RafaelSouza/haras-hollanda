@@ -8,6 +8,8 @@ import {
 
 import {
   AlertTriangle,
+  ArrowRight,
+  CalendarClock,
   CheckCircle2,
   Clock3,
   Plus,
@@ -18,19 +20,25 @@ import {
 } from 'lucide-react'
 
 import {
+  Link,
+} from 'react-router-dom'
+
+import {
   MoneyInput,
 } from '../../components/ui/MoneyInput.tsx'
 
-import type {
-  FinancialChargeListItem,
-  FinancialMonthSummary,
-  FinancialTransaction,
+import {
+  FINANCIAL_TRANSACTION_SOURCE_LABELS,
+  type FinancialChargeListItem,
+  type FinancialMonthSummary,
+  type FinancialTransaction,
 } from '../../domain/finance.ts'
 
 import {
   confirmMonthlyFinancialCharge,
   createManualFinancialExpense,
   loadFinancialMonth,
+  type PendingAppointmentExpense,
 } from './financeService.ts'
 
 import './FinancePage.css'
@@ -85,8 +93,11 @@ function formatCurrency(
   return new Intl.NumberFormat(
     'pt-BR',
     {
-      style: 'currency',
-      currency: 'BRL',
+      style:
+        'currency',
+
+      currency:
+        'BRL',
     },
   ).format(
     value,
@@ -163,13 +174,40 @@ function formatDateTime(
   )
 }
 
+function formatDate(
+  value: string,
+) {
+  return new Intl.DateTimeFormat(
+    'pt-BR',
+    {
+      day:
+        '2-digit',
+
+      month:
+        '2-digit',
+
+      year:
+        'numeric',
+    },
+  ).format(
+    new Date(
+      value,
+    ),
+  )
+}
+
 function sortCharges(
   charges: FinancialChargeListItem[],
 ) {
   const statusPriority = {
-    pending: 0,
-    paid: 1,
-    cancelled: 2,
+    pending:
+      0,
+
+    paid:
+      1,
+
+    cancelled:
+      2,
   }
 
   return [
@@ -241,6 +279,13 @@ export function FinancePage() {
     setTransactions,
   ] = useState<
     FinancialTransaction[]
+  >([])
+
+  const [
+    pendingAppointmentExpenses,
+    setPendingAppointmentExpenses,
+  ] = useState<
+    PendingAppointmentExpense[]
   >([])
 
   const [
@@ -337,6 +382,10 @@ export function FinancePage() {
           setTransactions(
             data.transactions,
           )
+
+          setPendingAppointmentExpenses(
+            data.pendingAppointmentExpenses,
+          )
         } catch (error) {
           const message =
             error instanceof Error
@@ -388,6 +437,10 @@ export function FinancePage() {
 
         setTransactions(
           data.transactions,
+        )
+
+        setPendingAppointmentExpenses(
+          data.pendingAppointmentExpenses,
         )
       } catch (error) {
         if (
@@ -448,6 +501,44 @@ export function FinancePage() {
         charges,
       ],
     )
+
+  const pendingChargeAmount =
+    useMemo(
+      () =>
+        pendingCharges.reduce(
+          (
+            total,
+            charge,
+          ) =>
+            total +
+            charge.amount,
+          0,
+        ),
+      [
+        pendingCharges,
+      ],
+    )
+
+  const pendingAppointmentAmount =
+    useMemo(
+      () =>
+        pendingAppointmentExpenses.reduce(
+          (
+            total,
+            appointment,
+          ) =>
+            total +
+            appointment.serviceAmount,
+          0,
+        ),
+      [
+        pendingAppointmentExpenses,
+      ],
+    )
+
+  const attentionCount =
+    pendingCharges.length +
+    pendingAppointmentExpenses.length
 
   function handleToggleExpenseForm() {
     setExpenseFormOpen(
@@ -669,8 +760,8 @@ export function FinancePage() {
         </h1>
 
         <p className="page-header__description">
-          Acompanhe o que entrou, o que ainda precisa ser recebido e o saldo
-          real do haras sem repetir lançamentos.
+          Veja o que realmente entrou, o que saiu e o que ainda precisa da sua
+          atenção sem repetir lançamentos.
         </p>
       </header>
 
@@ -689,7 +780,7 @@ export function FinancePage() {
 
         <div className="finance-period__actions">
           <span className="finance-period__note">
-            As mensalidades são preparadas automaticamente.
+            Mensalidades, Agenda e Estoque alimentam o caixa automaticamente.
           </span>
 
           <button
@@ -713,7 +804,7 @@ export function FinancePage() {
 
             {expenseFormOpen
               ? 'Fechar'
-              : 'Nova despesa'}
+              : 'Despesa avulsa'}
           </button>
         </div>
       </div>
@@ -723,16 +814,17 @@ export function FinancePage() {
           <div className="finance-expense-panel__header">
             <div>
               <span>
-                Saída de caixa
+                Exceção
               </span>
 
               <h2>
-                Registrar despesa
+                Registrar despesa avulsa
               </h2>
             </div>
 
             <p>
-              Use este lançamento para despesas que não são compras de estoque.
+              Agenda e compras de estoque já entram automaticamente. Use aqui
+              somente para gastos como energia, combustível ou manutenção.
             </p>
           </div>
 
@@ -761,7 +853,7 @@ export function FinancePage() {
                     event.target.value,
                   )
                 }
-                placeholder="Ex: Ferrageamento do Apache"
+                placeholder="Ex: Conta de energia do haras"
                 autoComplete="off"
                 required
               />
@@ -909,6 +1001,40 @@ export function FinancePage() {
       )}
 
       <div className="finance-summary">
+        <article
+          className={`finance-summary-card finance-summary-card--balance ${
+            summary &&
+            summary.balanceAmount <
+              0
+              ? 'finance-summary-card--negative'
+              : ''
+          }`}
+        >
+          <div className="finance-summary-card__icon">
+            <ReceiptText
+              size={19}
+              strokeWidth={1.8}
+            />
+          </div>
+
+          <span>
+            Saldo real
+          </span>
+
+          <strong>
+            {loading ||
+            !summary
+              ? '...'
+              : formatCurrency(
+                  summary.balanceAmount,
+                )}
+          </strong>
+
+          <small>
+            O que realmente ficou no caixa neste mês
+          </small>
+        </article>
+
         <article className="finance-summary-card">
           <div className="finance-summary-card__icon">
             <WalletCards
@@ -918,7 +1044,7 @@ export function FinancePage() {
           </div>
 
           <span>
-            Recebido no mês
+            Recebido
           </span>
 
           <strong>
@@ -957,12 +1083,7 @@ export function FinancePage() {
           </strong>
 
           <small>
-            {loading
-              ? 'Carregando...'
-              : pendingCharges.length ===
-                  1
-                ? '1 mensalidade pendente'
-                : `${pendingCharges.length} mensalidades pendentes`}
+            Mensalidades que ainda não foram recebidas
           </small>
         </article>
 
@@ -975,7 +1096,7 @@ export function FinancePage() {
           </div>
 
           <span>
-            Despesas
+            Despesas pagas
           </span>
 
           <strong>
@@ -988,36 +1109,204 @@ export function FinancePage() {
           </strong>
 
           <small>
-            Valores efetivamente pagos
-          </small>
-        </article>
-
-        <article className="finance-summary-card finance-summary-card--balance">
-          <div className="finance-summary-card__icon">
-            <ReceiptText
-              size={19}
-              strokeWidth={1.8}
-            />
-          </div>
-
-          <span>
-            Saldo real
-          </span>
-
-          <strong>
-            {loading ||
-            !summary
-              ? '...'
-              : formatCurrency(
-                  summary.balanceAmount,
-                )}
-          </strong>
-
-          <small>
-            Receitas menos despesas
+            Dinheiro que realmente saiu
           </small>
         </article>
       </div>
+
+      <section className="finance-section finance-section--attention">
+        <div className="finance-section__header">
+          <div>
+            <span className="finance-section__eyebrow">
+              Atenção financeira
+            </span>
+
+            <h2>
+              O que precisa da sua atenção
+            </h2>
+          </div>
+
+          {!loading && (
+            <span
+              className={`finance-section__counter ${
+                attentionCount ===
+                  0
+                  ? 'finance-section__counter--clear'
+                  : 'finance-section__counter--attention'
+              }`}
+            >
+              {attentionCount}
+            </span>
+          )}
+        </div>
+
+        {loading && (
+          <div className="finance-state">
+            Verificando pendências...
+          </div>
+        )}
+
+        {!loading &&
+          attentionCount ===
+            0 && (
+            <div className="finance-attention-clear">
+              <CheckCircle2
+                size={20}
+                strokeWidth={1.7}
+              />
+
+              <div>
+                <strong>
+                  Tudo sob controle
+                </strong>
+
+                <span>
+                  Não há mensalidades pendentes nem serviços concluídos
+                  aguardando pagamento.
+                </span>
+              </div>
+            </div>
+          )}
+
+        {!loading &&
+          attentionCount >
+            0 && (
+            <div className="finance-attention-grid">
+              {pendingCharges.length >
+                0 && (
+                <article className="finance-attention-card">
+                  <div className="finance-attention-card__top">
+                    <div className="finance-attention-card__icon finance-attention-card__icon--warning">
+                      <Clock3
+                        size={18}
+                        strokeWidth={1.8}
+                      />
+                    </div>
+
+                    <span>
+                      Mensalidades
+                    </span>
+                  </div>
+
+                  <strong className="finance-attention-card__title">
+                    {pendingCharges.length ===
+                    1
+                      ? '1 mensalidade a receber'
+                      : `${pendingCharges.length} mensalidades a receber`}
+                  </strong>
+
+                  <span className="finance-attention-card__amount">
+                    {formatCurrency(
+                      pendingChargeAmount,
+                    )}
+                  </span>
+
+                  <small>
+                    Confirme o recebimento somente quando o dinheiro realmente
+                    entrar.
+                  </small>
+                </article>
+              )}
+
+              {pendingAppointmentExpenses.length >
+                0 && (
+                <article className="finance-attention-card finance-attention-card--agenda">
+                  <div className="finance-attention-card__top">
+                    <div className="finance-attention-card__icon">
+                      <CalendarClock
+                        size={18}
+                        strokeWidth={1.8}
+                      />
+                    </div>
+
+                    <span>
+                      Agenda
+                    </span>
+                  </div>
+
+                  <strong className="finance-attention-card__title">
+                    {pendingAppointmentExpenses.length ===
+                    1
+                      ? '1 serviço aguardando pagamento'
+                      : `${pendingAppointmentExpenses.length} serviços aguardando pagamento`}
+                  </strong>
+
+                  <span className="finance-attention-card__amount">
+                    {formatCurrency(
+                      pendingAppointmentAmount,
+                    )}
+                  </span>
+
+                  <div className="finance-attention-services">
+                    {pendingAppointmentExpenses
+                      .slice(
+                        0,
+                        3,
+                      )
+                      .map(
+                        (
+                          appointment,
+                        ) => (
+                          <Link
+                            className="finance-attention-service"
+                            key={
+                              appointment.appointmentId
+                            }
+                            to={`/agenda?appointment=${appointment.appointmentId}`}
+                          >
+                            <div>
+                              <strong>
+                                {
+                                  appointment.title
+                                }{' '}
+                                ·{' '}
+                                {
+                                  appointment.horseName
+                                }
+                              </strong>
+
+                              <span>
+                                {appointment.professionalName
+                                  ? `${appointment.professionalName} · `
+                                  : ''}
+                                {formatDate(
+                                  appointment.scheduledAt,
+                                )}
+                              </span>
+                            </div>
+
+                            <span className="finance-attention-service__amount">
+                              {formatCurrency(
+                                appointment.serviceAmount,
+                              )}
+                            </span>
+
+                            <ArrowRight
+                              size={15}
+                            />
+                          </Link>
+                        ),
+                      )}
+                  </div>
+
+                  {pendingAppointmentExpenses.length >
+                    3 && (
+                    <Link
+                      className="finance-attention-card__action"
+                      to="/agenda"
+                    >
+                      Ver todos na Agenda
+
+                      <ArrowRight
+                        size={14}
+                      />
+                    </Link>
+                  )}
+                </article>
+              )}
+            </div>
+          )}
+      </section>
 
       <section className="finance-section">
         <div className="finance-section__header">
@@ -1271,11 +1560,21 @@ export function FinancePage() {
                         }
                       </strong>
 
-                      <span>
-                        {formatDateTime(
-                          transaction.occurredAt,
-                        )}
-                      </span>
+                      <div className="finance-transaction__meta">
+                        <span className="finance-transaction__source">
+                          {
+                            FINANCIAL_TRANSACTION_SOURCE_LABELS[
+                              transaction.sourceType
+                            ]
+                          }
+                        </span>
+
+                        <span>
+                          {formatDateTime(
+                            transaction.occurredAt,
+                          )}
+                        </span>
+                      </div>
                     </div>
 
                     <strong
