@@ -10,7 +10,10 @@ import {
   AlertTriangle,
   ArrowRight,
   CalendarClock,
+  CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Plus,
   ReceiptText,
@@ -43,22 +46,62 @@ import {
 
 import './FinancePage.css'
 
-function getCurrentCompetence() {
-  const today =
-    new Date()
-
+function getCompetenceFromDate(
+  date: Date,
+) {
   const year =
-    today.getFullYear()
+    date.getFullYear()
 
   const month =
     String(
-      today.getMonth() + 1,
+      date.getMonth() + 1,
     ).padStart(
       2,
       '0',
     )
 
   return `${year}-${month}-01`
+}
+
+function getCurrentCompetence() {
+  return getCompetenceFromDate(
+    new Date(),
+  )
+}
+
+function shiftCompetence(
+  competenceMonth: string,
+  amount: number,
+) {
+  const [
+    yearText,
+    monthText,
+  ] =
+    competenceMonth
+      .slice(
+        0,
+        7,
+      )
+      .split(
+        '-',
+      )
+
+  const date =
+    new Date(
+      Number(
+        yearText,
+      ),
+      Number(
+        monthText,
+      ) -
+        1 +
+        amount,
+      1,
+    )
+
+  return getCompetenceFromDate(
+    date,
+  )
 }
 
 function getCurrentDateInputValue() {
@@ -254,11 +297,19 @@ function sortCharges(
 }
 
 export function FinancePage() {
-  const competence =
+  const currentCompetence =
     getCurrentCompetence()
 
   const today =
     getCurrentDateInputValue()
+
+  const [
+    competence,
+    setCompetence,
+  ] = useState(
+    () =>
+      getCurrentCompetence(),
+  )
 
   const [
     summary,
@@ -358,10 +409,22 @@ export function FinancePage() {
     false,
   )
 
+  const isCurrentCompetence =
+    competence ===
+    currentCompetence
+
+  const canGoNext =
+    competence <
+    currentCompetence
+
   const loadFinance =
     useCallback(
       async () => {
         try {
+          setLoading(
+            true,
+          )
+
           setError(
             null,
           )
@@ -412,6 +475,10 @@ export function FinancePage() {
 
     async function load() {
       try {
+        setLoading(
+          true,
+        )
+
         setError(
           null,
         )
@@ -540,7 +607,63 @@ export function FinancePage() {
     pendingCharges.length +
     pendingAppointmentExpenses.length
 
+  function changeCompetence(
+    nextCompetence: string,
+  ) {
+    setCompetence(
+      nextCompetence,
+    )
+
+    setExpenseFormOpen(
+      false,
+    )
+
+    setError(
+      null,
+    )
+
+    setSuccessMessage(
+      null,
+    )
+  }
+
+  function handlePreviousMonth() {
+    changeCompetence(
+      shiftCompetence(
+        competence,
+        -1,
+      ),
+    )
+  }
+
+  function handleNextMonth() {
+    if (
+      !canGoNext
+    ) {
+      return
+    }
+
+    changeCompetence(
+      shiftCompetence(
+        competence,
+        1,
+      ),
+    )
+  }
+
+  function handleCurrentMonth() {
+    changeCompetence(
+      currentCompetence,
+    )
+  }
+
   function handleToggleExpenseForm() {
+    if (
+      !isCurrentCompetence
+    ) {
+      return
+    }
+
     setExpenseFormOpen(
       (
         currentValue,
@@ -600,13 +723,13 @@ export function FinancePage() {
         0,
         7,
       ) !==
-      competence.slice(
+      currentCompetence.slice(
         0,
         7,
       )
     ) {
       setError(
-        'A despesa precisa pertencer à competência atual.',
+        'A despesa avulsa precisa pertencer ao mês atual.',
       )
 
       return
@@ -723,13 +846,25 @@ export function FinancePage() {
           charge.id,
         )
 
-      setSuccessMessage(
+      if (
         result.alreadyPaid
-          ? `A mensalidade de ${charge.horseName} já estava registrada como recebida.`
-          : `Recebimento de ${formatCurrency(
-              result.amount,
-            )} confirmado para ${charge.horseName}.`,
-      )
+      ) {
+        setSuccessMessage(
+          `A mensalidade de ${charge.horseName} já estava registrada como recebida.`,
+        )
+      } else if (
+        isCurrentCompetence
+      ) {
+        setSuccessMessage(
+          `Recebimento de ${formatCurrency(
+            result.amount,
+          )} confirmado para ${charge.horseName}.`,
+        )
+      } else {
+        setSuccessMessage(
+          `A mensalidade antiga de ${charge.horseName} foi recebida agora. A entrada foi registrada no caixa da data atual.`,
+        )
+      }
 
       await loadFinance()
     } catch (error) {
@@ -766,48 +901,124 @@ export function FinancePage() {
       </header>
 
       <div className="finance-period">
-        <div className="finance-period__competence">
-          <span className="finance-period__eyebrow">
-            Competência atual
-          </span>
+        <div className="finance-period__navigation">
+          <button
+            type="button"
+            className="finance-period__nav-button"
+            onClick={
+              handlePreviousMonth
+            }
+            aria-label="Ver mês anterior"
+          >
+            <ChevronLeft
+              size={17}
+            />
+          </button>
 
-          <strong>
-            {formatCompetence(
-              competence,
-            )}
-          </strong>
+          <div className="finance-period__competence">
+            <span className="finance-period__eyebrow">
+              {isCurrentCompetence
+                ? 'Competência atual'
+                : 'Histórico financeiro'}
+            </span>
+
+            <strong>
+              {formatCompetence(
+                competence,
+              )}
+            </strong>
+          </div>
+
+          <button
+            type="button"
+            className="finance-period__nav-button"
+            disabled={
+              !canGoNext
+            }
+            onClick={
+              handleNextMonth
+            }
+            aria-label="Ver próximo mês"
+          >
+            <ChevronRight
+              size={17}
+            />
+          </button>
+
+          {!isCurrentCompetence && (
+            <button
+              type="button"
+              className="finance-period__current-button"
+              onClick={
+                handleCurrentMonth
+              }
+            >
+              <CalendarDays
+                size={14}
+              />
+
+              Mês atual
+            </button>
+          )}
         </div>
 
         <div className="finance-period__actions">
           <span className="finance-period__note">
-            Mensalidades, Agenda e Estoque alimentam o caixa automaticamente.
+            {isCurrentCompetence
+              ? 'Mensalidades, Agenda e Estoque alimentam o caixa automaticamente.'
+              : 'Histórico preservado: o sistema não cria mensalidades retroativas.'}
           </span>
 
-          <button
-            className="finance-new-expense-button"
-            type="button"
-            onClick={
-              handleToggleExpenseForm
-            }
-          >
-            {expenseFormOpen ? (
-              <X
-                size={16}
-                strokeWidth={1.8}
-              />
-            ) : (
-              <Plus
-                size={16}
-                strokeWidth={1.8}
-              />
-            )}
+          {isCurrentCompetence && (
+            <button
+              className="finance-new-expense-button"
+              type="button"
+              onClick={
+                handleToggleExpenseForm
+              }
+            >
+              {expenseFormOpen ? (
+                <X
+                  size={16}
+                  strokeWidth={1.8}
+                />
+              ) : (
+                <Plus
+                  size={16}
+                  strokeWidth={1.8}
+                />
+              )}
 
-            {expenseFormOpen
-              ? 'Fechar'
-              : 'Despesa avulsa'}
-          </button>
+              {expenseFormOpen
+                ? 'Fechar'
+                : 'Despesa avulsa'}
+            </button>
+          )}
         </div>
       </div>
+
+      {!isCurrentCompetence && (
+        <div className="finance-history-note">
+          <CalendarDays
+            size={17}
+            strokeWidth={1.8}
+          />
+
+          <div>
+            <strong>
+              Visualizando histórico
+            </strong>
+
+            <span>
+              Valores e movimentações abaixo são os registros realmente
+              existentes em {formatCompetence(
+                competence,
+              )}. O sistema não reconstrói cobranças que não existiam naquele
+              momento.
+            </span>
+          </div>
+        </div>
+      )}
 
       {expenseFormOpen && (
         <section className="finance-expense-panel">
@@ -890,7 +1101,7 @@ export function FinancePage() {
                 name="expenseDate"
                 type="date"
                 min={
-                  competence
+                  currentCompetence
                 }
                 max={
                   today
@@ -1031,7 +1242,7 @@ export function FinancePage() {
           </strong>
 
           <small>
-            O que realmente ficou no caixa neste mês
+            Resultado real do caixa nesta competência
           </small>
         </article>
 
@@ -1083,7 +1294,7 @@ export function FinancePage() {
           </strong>
 
           <small>
-            Mensalidades que ainda não foram recebidas
+            Mensalidades ainda não recebidas
           </small>
         </article>
 
@@ -1122,7 +1333,9 @@ export function FinancePage() {
             </span>
 
             <h2>
-              O que precisa da sua atenção
+              {isCurrentCompetence
+                ? 'O que precisa da sua atenção'
+                : 'Pendências desta competência'}
             </h2>
           </div>
 
@@ -1161,7 +1374,7 @@ export function FinancePage() {
                 </strong>
 
                 <span>
-                  Não há mensalidades pendentes nem serviços concluídos
+                  Não há mensalidades pendentes nem serviços desta competência
                   aguardando pagamento.
                 </span>
               </div>
@@ -1202,8 +1415,9 @@ export function FinancePage() {
                   </span>
 
                   <small>
-                    Confirme o recebimento somente quando o dinheiro realmente
-                    entrar.
+                    {isCurrentCompetence
+                      ? 'Confirme somente quando o dinheiro realmente entrar.'
+                      : 'Se receber uma mensalidade antiga agora, a entrada será registrada na data atual.'}
                   </small>
                 </article>
               )}
@@ -1351,12 +1565,13 @@ export function FinancePage() {
               />
 
               <strong>
-                Nenhuma mensalidade para este mês
+                Nenhuma mensalidade registrada neste mês
               </strong>
 
               <span>
-                Cavalos ativos com mensalidade cadastrada aparecerão aqui
-                automaticamente.
+                {isCurrentCompetence
+                  ? 'Cavalos ativos com mensalidade cadastrada aparecerão aqui automaticamente.'
+                  : 'O histórico mostra apenas cobranças que realmente foram registradas nesta competência.'}
               </span>
             </div>
           )}
@@ -1477,7 +1692,9 @@ export function FinancePage() {
                           >
                             {isProcessing
                               ? 'Confirmando...'
-                              : 'Confirmar recebimento'}
+                              : isCurrentCompetence
+                                ? 'Confirmar recebimento'
+                                : 'Receber agora'}
                           </button>
                         ) : (
                           <span className="finance-charge__done">
@@ -1530,7 +1747,8 @@ export function FinancePage() {
               </strong>
 
               <span>
-                Recebimentos e despesas aparecerão aqui automaticamente.
+                Não há entradas ou saídas de caixa registradas nesta
+                competência.
               </span>
             </div>
           )}

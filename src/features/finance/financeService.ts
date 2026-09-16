@@ -232,6 +232,24 @@ function normalizeCompetenceMonth(
   )}-01`
 }
 
+function getCurrentCompetenceMonth() {
+  const today =
+    new Date()
+
+  const year =
+    today.getFullYear()
+
+  const month =
+    String(
+      today.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    )
+
+  return `${year}-${month}-01`
+}
+
 function getMonthDateRange(
   competenceMonth: string,
 ) {
@@ -816,9 +834,17 @@ export async function getFinancialTransactionsByMonth(
   )
 }
 
-export async function getPendingAppointmentExpenses(): Promise<
-  PendingAppointmentExpense[]
-> {
+export async function getPendingAppointmentExpenses(
+  competenceMonth: string,
+): Promise<PendingAppointmentExpense[]> {
+  const {
+    start,
+    end,
+  } =
+    getMonthDateRange(
+      competenceMonth,
+    )
+
   const {
     data: appointmentData,
     error: appointmentError,
@@ -841,6 +867,14 @@ export async function getPendingAppointmentExpenses(): Promise<
     .gt(
       'service_amount',
       0,
+    )
+    .gte(
+      'scheduled_at',
+      start,
+    )
+    .lt(
+      'scheduled_at',
+      end,
     )
     .order(
       'scheduled_at',
@@ -970,9 +1004,22 @@ export async function getPendingAppointmentExpenses(): Promise<
 export async function loadFinancialMonth(
   competenceMonth: string,
 ) {
-  await ensureMonthlyFinancialCharges(
-    competenceMonth,
-  )
+  const normalizedCompetence =
+    normalizeCompetenceMonth(
+      competenceMonth,
+    )
+
+  const currentCompetence =
+    getCurrentCompetenceMonth()
+
+  if (
+    normalizedCompetence ===
+    currentCompetence
+  ) {
+    await ensureMonthlyFinancialCharges(
+      normalizedCompetence,
+    )
+  }
 
   const [
     summary,
@@ -981,18 +1028,20 @@ export async function loadFinancialMonth(
     pendingAppointmentExpenses,
   ] = await Promise.all([
     getFinancialMonthSummary(
-      competenceMonth,
+      normalizedCompetence,
     ),
 
     getFinancialChargesByMonth(
-      competenceMonth,
+      normalizedCompetence,
     ),
 
     getFinancialTransactionsByMonth(
-      competenceMonth,
+      normalizedCompetence,
     ),
 
-    getPendingAppointmentExpenses(),
+    getPendingAppointmentExpenses(
+      normalizedCompetence,
+    ),
   ])
 
   return {
