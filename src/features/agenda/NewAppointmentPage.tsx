@@ -1,7 +1,9 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
+  type ChangeEvent,
   type SubmitEvent,
 } from 'react'
 
@@ -14,6 +16,10 @@ import {
   Link,
   useNavigate,
 } from 'react-router-dom'
+
+import {
+  MoneyInput,
+} from '../../components/ui/MoneyInput.tsx'
 
 import {
   SearchableSelect,
@@ -31,6 +37,7 @@ import {
 
 import {
   createAppointment,
+  getSuggestedServiceAmount,
 } from './appointmentsService.ts'
 
 import {
@@ -68,18 +75,75 @@ const observationPlaceholders: Record<
     'Ex: Descreva a atividade que será realizada com este cavalo.',
 }
 
+function formatCurrency(
+  value: number,
+) {
+  return new Intl.NumberFormat(
+    'pt-BR',
+    {
+      style:
+        'currency',
+
+      currency:
+        'BRL',
+    },
+  ).format(
+    value,
+  )
+}
+
+function hasCompletedDateYear(
+  value: string,
+) {
+  const match =
+    /^(\d{4})-\d{2}-\d{2}$/.exec(
+      value,
+    )
+
+  if (
+    !match
+  ) {
+    return false
+  }
+
+  const year =
+    Number(
+      match[1],
+    )
+
+  return (
+    Number.isInteger(
+      year,
+    ) &&
+    year >= 1000
+  )
+}
+
 export function NewAppointmentPage() {
-  const navigate = useNavigate()
+  const navigate =
+    useNavigate()
+
+  const timeInputRef =
+    useRef<HTMLInputElement>(
+      null,
+    )
+
+  const serviceAmountManuallyEditedRef =
+    useRef(false)
 
   const [
     horseOptions,
     setHorseOptions,
-  ] = useState<SearchableSelectOption[]>([])
+  ] = useState<
+    SearchableSelectOption[]
+  >([])
 
   const [
     professionalOptions,
     setProfessionalOptions,
-  ] = useState<SearchableSelectOption[]>([])
+  ] = useState<
+    SearchableSelectOption[]
+  >([])
 
   const [
     horseId,
@@ -99,14 +163,36 @@ export function NewAppointmentPage() {
   )
 
   const [
-    scheduledAt,
-    setScheduledAt,
+    appointmentDate,
+    setAppointmentDate,
+  ] = useState('')
+
+  const [
+    appointmentTime,
+    setAppointmentTime,
   ] = useState('')
 
   const [
     description,
     setDescription,
   ] = useState('')
+
+  const [
+    serviceAmount,
+    setServiceAmount,
+  ] = useState(0)
+
+  const [
+    suggestedServiceAmount,
+    setSuggestedServiceAmount,
+  ] = useState<
+    number | null
+  >(null)
+
+  const [
+    loadingSuggestedAmount,
+    setLoadingSuggestedAmount,
+  ] = useState(false)
 
   const [
     loadingOptions,
@@ -121,10 +207,13 @@ export function NewAppointmentPage() {
   const [
     error,
     setError,
-  ] = useState<string | null>(null)
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadOptions() {
       try {
@@ -136,19 +225,25 @@ export function NewAppointmentPage() {
           getProfessionals(),
         ])
 
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
         setHorseOptions(
           horses
             .filter(
-              (horse) => horse.active,
+              (horse) =>
+                horse.active,
             )
             .map(
               (horse) => ({
-                value: horse.id,
-                label: horse.name,
+                value:
+                  horse.id,
+
+                label:
+                  horse.name,
               }),
             ),
         )
@@ -161,7 +256,8 @@ export function NewAppointmentPage() {
             )
             .map(
               (professional) => ({
-                value: professional.id,
+                value:
+                  professional.id,
 
                 label:
                   professional.specialty
@@ -171,7 +267,9 @@ export function NewAppointmentPage() {
             ),
         )
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -180,10 +278,16 @@ export function NewAppointmentPage() {
             ? error.message
             : 'Não foi possível carregar os dados do formulário.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoadingOptions(false)
+        if (
+          isMounted
+        ) {
+          setLoadingOptions(
+            false,
+          )
         }
       }
     }
@@ -191,9 +295,84 @@ export function NewAppointmentPage() {
     loadOptions()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
   }, [])
+
+  useEffect(() => {
+    let isMounted =
+      true
+
+    async function loadSuggestedAmount() {
+      if (
+        !professionalId
+      ) {
+        setSuggestedServiceAmount(
+          null,
+        )
+
+        return
+      }
+
+      try {
+        setLoadingSuggestedAmount(
+          true,
+        )
+
+        const amount =
+          await getSuggestedServiceAmount(
+            professionalId,
+            eventType,
+          )
+
+        if (
+          !isMounted
+        ) {
+          return
+        }
+
+        setSuggestedServiceAmount(
+          amount,
+        )
+
+        if (
+          !serviceAmountManuallyEditedRef.current
+        ) {
+          setServiceAmount(
+            amount ??
+              0,
+          )
+        }
+      } catch {
+        if (
+          isMounted
+        ) {
+          setSuggestedServiceAmount(
+            null,
+          )
+        }
+      } finally {
+        if (
+          isMounted
+        ) {
+          setLoadingSuggestedAmount(
+            false,
+          )
+        }
+      }
+    }
+
+    loadSuggestedAmount()
+
+    return () => {
+      isMounted =
+        false
+    }
+  }, [
+    professionalId,
+    eventType,
+  ])
 
   const eventTypeOptions =
     useMemo(
@@ -207,14 +386,52 @@ export function NewAppointmentPage() {
       [],
     )
 
+  function handleServiceAmountChange(
+    value: number,
+  ) {
+    serviceAmountManuallyEditedRef.current =
+      true
+
+    setServiceAmount(
+      value,
+    )
+  }
+
+  function handleDateChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const value =
+      event.target.value
+
+    setAppointmentDate(
+      value,
+    )
+
+    if (
+      hasCompletedDateYear(
+        value,
+      )
+    ) {
+      window.requestAnimationFrame(
+        () => {
+          timeInputRef.current?.focus()
+        },
+      )
+    }
+  }
+
   async function handleSubmit(
     event: SubmitEvent<HTMLFormElement>,
   ) {
     event.preventDefault()
 
-    setError(null)
+    setError(
+      null,
+    )
 
-    if (!horseId) {
+    if (
+      !horseId
+    ) {
       setError(
         'Selecione o cavalo deste compromisso.',
       )
@@ -222,16 +439,46 @@ export function NewAppointmentPage() {
       return
     }
 
-    if (!scheduledAt) {
+    if (
+      !appointmentDate
+    ) {
       setError(
-        'Informe a data e o horário do compromisso.',
+        'Informe a data do compromisso.',
+      )
+
+      return
+    }
+
+    if (
+      !appointmentTime
+    ) {
+      setError(
+        'Informe o horário do compromisso.',
+      )
+
+      timeInputRef.current?.focus()
+
+      return
+    }
+
+    if (
+      !Number.isFinite(
+        serviceAmount,
+      ) ||
+      serviceAmount <
+        0
+    ) {
+      setError(
+        'Informe um valor de serviço válido.',
       )
 
       return
     }
 
     const scheduledDate =
-      new Date(scheduledAt)
+      new Date(
+        `${appointmentDate}T${appointmentTime}`,
+      )
 
     if (
       Number.isNaN(
@@ -250,14 +497,18 @@ export function NewAppointmentPage() {
         eventType
       ]
 
-    setSaving(true)
+    setSaving(
+      true,
+    )
 
     try {
       await createAppointment({
-        title: generatedTitle,
+        title:
+          generatedTitle,
 
         description:
-          description.trim() || null,
+          description.trim() ||
+          null,
 
         eventType,
 
@@ -267,19 +518,32 @@ export function NewAppointmentPage() {
         horseId,
 
         professionalId:
-          professionalId || null,
+          professionalId ||
+          null,
+
+        serviceAmount:
+          serviceAmount >
+          0
+            ? serviceAmount
+            : null,
       })
 
-      navigate('/agenda')
+      navigate(
+        '/agenda',
+      )
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Não foi possível criar o compromisso.'
 
-      setError(message)
+      setError(
+        message,
+      )
     } finally {
-      setSaving(false)
+      setSaving(
+        false,
+      )
     }
   }
 
@@ -290,8 +554,11 @@ export function NewAppointmentPage() {
           className="new-appointment-header__back"
           to="/agenda"
         >
-          <ArrowLeft size={17} />
-          Agenda
+          <ArrowLeft
+            size={17}
+          />
+
+          Voltar à agenda
         </Link>
 
         <div>
@@ -311,7 +578,9 @@ export function NewAppointmentPage() {
 
       <form
         className="new-appointment-form"
-        onSubmit={handleSubmit}
+        onSubmit={
+          handleSubmit
+        }
       >
         <div className="new-appointment-form__header">
           <div className="new-appointment-form__icon">
@@ -346,16 +615,22 @@ export function NewAppointmentPage() {
             ) : (
               <SearchableSelect
                 id="horse"
-                value={horseId}
-                options={horseOptions}
+                value={
+                  horseId
+                }
+                options={
+                  horseOptions
+                }
                 placeholder="Pesquise o nome do cavalo..."
                 emptyMessage="Nenhum cavalo encontrado."
-                onChange={setHorseId}
+                onChange={
+                  setHorseId
+                }
               />
             )}
           </div>
 
-          <div className="new-appointment-field new-appointment-field--full">
+          <div className="new-appointment-field">
             <label htmlFor="eventType">
               Tipo de serviço
             </label>
@@ -363,8 +638,12 @@ export function NewAppointmentPage() {
             <select
               id="eventType"
               name="eventType"
-              value={eventType}
-              onChange={(event) =>
+              value={
+                eventType
+              }
+              onChange={(
+                event,
+              ) =>
                 setEventType(
                   event.target
                     .value as AppointmentEventType,
@@ -372,10 +651,19 @@ export function NewAppointmentPage() {
               }
             >
               {eventTypeOptions.map(
-                ([value, label]) => (
+                (
+                  [
+                    value,
+                    label,
+                  ],
+                ) => (
                   <option
-                    value={value}
-                    key={value}
+                    value={
+                      value
+                    }
+                    key={
+                      value
+                    }
                   >
                     {label}
                   </option>
@@ -384,7 +672,7 @@ export function NewAppointmentPage() {
             </select>
           </div>
 
-          <div className="new-appointment-field new-appointment-field--full">
+          <div className="new-appointment-field">
             <label htmlFor="professional">
               Técnico responsável
             </label>
@@ -396,15 +684,22 @@ export function NewAppointmentPage() {
             ) : (
               <SearchableSelect
                 id="professional"
-                value={professionalId}
-                options={professionalOptions}
+                value={
+                  professionalId
+                }
+                options={
+                  professionalOptions
+                }
                 placeholder="Pesquise o responsável..."
                 emptyMessage="Nenhum profissional encontrado."
-                onChange={setProfessionalId}
+                onChange={
+                  setProfessionalId
+                }
               />
             )}
 
-            {professionalOptions.length === 0 && (
+            {professionalOptions.length ===
+              0 && (
               <span className="new-appointment-field__help">
                 Nenhum profissional ativo cadastrado.
               </span>
@@ -412,22 +707,80 @@ export function NewAppointmentPage() {
           </div>
 
           <div className="new-appointment-field new-appointment-field--full">
-            <label htmlFor="scheduledAt">
-              Data e horário
+            <label htmlFor="serviceAmount">
+              Valor do serviço
             </label>
 
-            <input
-              id="scheduledAt"
-              name="scheduledAt"
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(event) =>
-                setScheduledAt(
-                  event.target.value,
-                )
+            <MoneyInput
+              id="serviceAmount"
+              name="serviceAmount"
+              value={
+                serviceAmount
               }
-              required
+              onChange={
+                handleServiceAmountChange
+              }
             />
+
+            <span className="new-appointment-field__help">
+              {loadingSuggestedAmount
+                ? 'Buscando o último valor usado para este profissional...'
+                : suggestedServiceAmount !==
+                    null
+                  ? `Último valor usado para este profissional e serviço: ${formatCurrency(
+                      suggestedServiceAmount,
+                    )}. Você pode ajustar se necessário.`
+                  : professionalId
+                    ? 'Ainda não existe um valor anterior para este profissional e serviço. Informe o valor desta vez.'
+                    : 'Selecione o profissional. O aplicativo tentará preencher o último valor usado automaticamente.'}
+            </span>
+          </div>
+
+          <div className="new-appointment-datetime new-appointment-field--full">
+            <div className="new-appointment-field">
+              <label htmlFor="appointmentDate">
+                Data
+              </label>
+
+              <input
+                id="appointmentDate"
+                name="appointmentDate"
+                type="date"
+                value={
+                  appointmentDate
+                }
+                onChange={
+                  handleDateChange
+                }
+                required
+              />
+            </div>
+
+            <div className="new-appointment-field">
+              <label htmlFor="appointmentTime">
+                Horário
+              </label>
+
+              <input
+                ref={
+                  timeInputRef
+                }
+                id="appointmentTime"
+                name="appointmentTime"
+                type="time"
+                value={
+                  appointmentTime
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setAppointmentTime(
+                    event.target.value,
+                  )
+                }
+                required
+              />
+            </div>
           </div>
 
           <div className="new-appointment-field new-appointment-field--full">
@@ -438,8 +791,12 @@ export function NewAppointmentPage() {
             <textarea
               id="description"
               name="description"
-              value={description}
-              onChange={(event) =>
+              value={
+                description
+              }
+              onChange={(
+                event,
+              ) =>
                 setDescription(
                   event.target.value,
                 )
@@ -474,7 +831,8 @@ export function NewAppointmentPage() {
             disabled={
               saving ||
               loadingOptions ||
-              horseOptions.length === 0
+              horseOptions.length ===
+                0
             }
           >
             {saving

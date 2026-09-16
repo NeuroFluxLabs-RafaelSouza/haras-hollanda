@@ -19,6 +19,10 @@ import {
 } from 'react-router-dom'
 
 import {
+  MoneyInput,
+} from '../../components/ui/MoneyInput.tsx'
+
+import {
   SearchableSelect,
   type SearchableSelectOption,
 } from '../../components/ui/SearchableSelect.tsx'
@@ -36,6 +40,7 @@ import {
 import {
   deleteAppointment,
   getAppointmentById,
+  getAppointmentPaymentRegistered,
   updateAppointment,
   updateAppointmentStatus,
 } from './appointmentsService.ts'
@@ -49,57 +54,78 @@ import './EditAppointmentPage.css'
 function toDateTimeLocalValue(
   isoDate: string,
 ) {
-  const date = new Date(isoDate)
+  const date =
+    new Date(
+      isoDate,
+    )
 
   const year =
     date.getFullYear()
 
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, '0')
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    )
 
-  const day = String(
-    date.getDate(),
-  ).padStart(2, '0')
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
+    )
 
-  const hours = String(
-    date.getHours(),
-  ).padStart(2, '0')
+  const hours =
+    String(
+      date.getHours(),
+    ).padStart(
+      2,
+      '0',
+    )
 
-  const minutes = String(
-    date.getMinutes(),
-  ).padStart(2, '0')
+  const minutes =
+    String(
+      date.getMinutes(),
+    ).padStart(
+      2,
+      '0',
+    )
 
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
 export function EditAppointmentPage() {
-  const navigate = useNavigate()
+  const navigate =
+    useNavigate()
 
   const {
     appointmentId,
-  } = useParams()
+  } =
+    useParams()
 
   const [
     appointment,
     setAppointment,
-  ] = useState<Appointment | null>(
-    null,
-  )
+  ] = useState<
+    Appointment | null
+  >(null)
 
   const [
     horseOptions,
     setHorseOptions,
-  ] = useState<SearchableSelectOption[]>(
-    [],
-  )
+  ] = useState<
+    SearchableSelectOption[]
+  >([])
 
   const [
     professionalOptions,
     setProfessionalOptions,
-  ] = useState<SearchableSelectOption[]>(
-    [],
-  )
+  ] = useState<
+    SearchableSelectOption[]
+  >([])
 
   const [
     horseId,
@@ -129,6 +155,16 @@ export function EditAppointmentPage() {
   ] = useState('')
 
   const [
+    serviceAmount,
+    setServiceAmount,
+  ] = useState(0)
+
+  const [
+    paymentRegistered,
+    setPaymentRegistered,
+  ] = useState(false)
+
+  const [
     loading,
     setLoading,
   ] = useState(true)
@@ -151,18 +187,25 @@ export function EditAppointmentPage() {
   const [
     error,
     setError,
-  ] = useState<string | null>(null)
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadData() {
-      if (!appointmentId) {
+      if (
+        !appointmentId
+      ) {
         setError(
           'Compromisso não identificado.',
         )
 
-        setLoading(false)
+        setLoading(
+          false,
+        )
 
         return
       }
@@ -172,6 +215,7 @@ export function EditAppointmentPage() {
           appointmentData,
           horses,
           professionals,
+          hasPayment,
         ] = await Promise.all([
           getAppointmentById(
             appointmentId,
@@ -180,9 +224,15 @@ export function EditAppointmentPage() {
           getHorses(),
 
           getProfessionals(),
+
+          getAppointmentPaymentRegistered(
+            appointmentId,
+          ),
         ])
 
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -191,7 +241,8 @@ export function EditAppointmentPage() {
         )
 
         setHorseId(
-          appointmentData.horseId ?? '',
+          appointmentData.horseId ??
+            '',
         )
 
         setProfessionalId(
@@ -214,15 +265,28 @@ export function EditAppointmentPage() {
             '',
         )
 
+        setServiceAmount(
+          appointmentData.serviceAmount ??
+            0,
+        )
+
+        setPaymentRegistered(
+          hasPayment,
+        )
+
         setHorseOptions(
           horses
             .filter(
-              (horse) => horse.active,
+              (horse) =>
+                horse.active,
             )
             .map(
               (horse) => ({
-                value: horse.id,
-                label: horse.name,
+                value:
+                  horse.id,
+
+                label:
+                  horse.name,
               }),
             ),
         )
@@ -248,7 +312,9 @@ export function EditAppointmentPage() {
             ),
         )
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -257,10 +323,16 @@ export function EditAppointmentPage() {
             ? error.message
             : 'Não foi possível carregar o compromisso.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoading(false)
+        if (
+          isMounted
+        ) {
+          setLoading(
+            false,
+          )
         }
       }
     }
@@ -268,9 +340,12 @@ export function EditAppointmentPage() {
     loadData()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
-  }, [appointmentId])
+  }, [
+    appointmentId,
+  ])
 
   const eventTypeOptions =
     useMemo(
@@ -296,9 +371,13 @@ export function EditAppointmentPage() {
       return
     }
 
-    setError(null)
+    setError(
+      null,
+    )
 
-    if (!horseId) {
+    if (
+      !horseId
+    ) {
       setError(
         'Selecione o cavalo deste compromisso.',
       )
@@ -306,7 +385,9 @@ export function EditAppointmentPage() {
       return
     }
 
-    if (!scheduledAt) {
+    if (
+      !scheduledAt
+    ) {
       setError(
         'Informe a data e o horário.',
       )
@@ -314,10 +395,28 @@ export function EditAppointmentPage() {
       return
     }
 
-    const scheduledDate =
-      new Date(scheduledAt)
+    if (
+      !Number.isFinite(
+        serviceAmount,
+      ) ||
+      serviceAmount <
+        0
+    ) {
+      setError(
+        'Informe um valor de serviço válido.',
+      )
 
-    setSaving(true)
+      return
+    }
+
+    const scheduledDate =
+      new Date(
+        scheduledAt,
+      )
+
+    setSaving(
+      true,
+    )
 
     try {
       await updateAppointment(
@@ -343,26 +442,51 @@ export function EditAppointmentPage() {
             professionalId ||
             null,
 
+          serviceAmount:
+            paymentRegistered
+              ? appointment.serviceAmount
+              : serviceAmount > 0
+                ? serviceAmount
+                : null,
+
           status:
             appointment.status,
         },
       )
 
-      navigate('/agenda')
+      navigate(
+        '/agenda',
+      )
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Não foi possível atualizar o compromisso.'
 
-      setError(message)
+      setError(
+        message,
+      )
     } finally {
-      setSaving(false)
+      setSaving(
+        false,
+      )
     }
   }
 
   async function handleCancelAppointment() {
-    if (!appointmentId) {
+    if (
+      !appointmentId
+    ) {
+      return
+    }
+
+    if (
+      paymentRegistered
+    ) {
+      setError(
+        'Este compromisso já possui pagamento registrado e não pode ser cancelado pela Agenda.',
+      )
+
       return
     }
 
@@ -371,12 +495,19 @@ export function EditAppointmentPage() {
         'Deseja cancelar este compromisso? Ele continuará no histórico da Agenda.',
       )
 
-    if (!confirmed) {
+    if (
+      !confirmed
+    ) {
       return
     }
 
-    setCancelling(true)
-    setError(null)
+    setCancelling(
+      true,
+    )
+
+    setError(
+      null,
+    )
 
     try {
       await updateAppointmentStatus(
@@ -384,21 +515,39 @@ export function EditAppointmentPage() {
         'cancelled',
       )
 
-      navigate('/agenda')
+      navigate(
+        '/agenda',
+      )
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Não foi possível cancelar o compromisso.'
 
-      setError(message)
+      setError(
+        message,
+      )
     } finally {
-      setCancelling(false)
+      setCancelling(
+        false,
+      )
     }
   }
 
   async function handleDelete() {
-    if (!appointmentId) {
+    if (
+      !appointmentId
+    ) {
+      return
+    }
+
+    if (
+      paymentRegistered
+    ) {
+      setError(
+        'Este compromisso possui uma movimentação financeira e deve permanecer no histórico.',
+      )
+
       return
     }
 
@@ -407,32 +556,47 @@ export function EditAppointmentPage() {
         'Excluir definitivamente este compromisso? Esta ação não poderá ser desfeita.',
       )
 
-    if (!confirmed) {
+    if (
+      !confirmed
+    ) {
       return
     }
 
-    setDeleting(true)
-    setError(null)
+    setDeleting(
+      true,
+    )
+
+    setError(
+      null,
+    )
 
     try {
       await deleteAppointment(
         appointmentId,
       )
 
-      navigate('/agenda')
+      navigate(
+        '/agenda',
+      )
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Não foi possível excluir o compromisso.'
 
-      setError(message)
+      setError(
+        message,
+      )
     } finally {
-      setDeleting(false)
+      setDeleting(
+        false,
+      )
     }
   }
 
-  if (loading) {
+  if (
+    loading
+  ) {
     return (
       <div className="edit-appointment-state">
         Carregando compromisso...
@@ -440,7 +604,9 @@ export function EditAppointmentPage() {
     )
   }
 
-  if (!appointment) {
+  if (
+    !appointment
+  ) {
     return (
       <div className="edit-appointment-state edit-appointment-state--error">
         {error ??
@@ -456,7 +622,10 @@ export function EditAppointmentPage() {
           className="edit-appointment-header__back"
           to="/agenda"
         >
-          <ArrowLeft size={17} />
+          <ArrowLeft
+            size={17}
+          />
+
           Agenda
         </Link>
 
@@ -470,14 +639,16 @@ export function EditAppointmentPage() {
           </h1>
 
           <p className="page-header__description">
-            Altere o serviço, responsável, data, horário ou observações.
+            Altere o serviço, responsável, valor, data, horário ou observações.
           </p>
         </div>
       </header>
 
       <form
         className="edit-appointment-form"
-        onSubmit={handleSubmit}
+        onSubmit={
+          handleSubmit
+        }
       >
         <div className="edit-appointment-form__header">
           <div className="edit-appointment-form__icon">
@@ -499,30 +670,40 @@ export function EditAppointmentPage() {
         </div>
 
         <div className="edit-appointment-form__grid">
-          <div className="edit-appointment-field edit-appointment-field--full">
+          <div className="edit-appointment-field">
             <label htmlFor="horse">
               Cavalo
             </label>
 
             <SearchableSelect
               id="horse"
-              value={horseId}
-              options={horseOptions}
+              value={
+                horseId
+              }
+              options={
+                horseOptions
+              }
               placeholder="Pesquise o cavalo..."
               emptyMessage="Nenhum cavalo encontrado."
-              onChange={setHorseId}
+              onChange={
+                setHorseId
+              }
             />
           </div>
 
-          <div className="edit-appointment-field edit-appointment-field--full">
+          <div className="edit-appointment-field">
             <label htmlFor="eventType">
               Tipo de serviço
             </label>
 
             <select
               id="eventType"
-              value={eventType}
-              onChange={(event) =>
+              value={
+                eventType
+              }
+              onChange={(
+                event,
+              ) =>
                 setEventType(
                   event.target
                     .value as AppointmentEventType,
@@ -530,10 +711,19 @@ export function EditAppointmentPage() {
               }
             >
               {eventTypeOptions.map(
-                ([value, label]) => (
+                (
+                  [
+                    value,
+                    label,
+                  ],
+                ) => (
                   <option
-                    value={value}
-                    key={value}
+                    value={
+                      value
+                    }
+                    key={
+                      value
+                    }
                   >
                     {label}
                   </option>
@@ -542,22 +732,54 @@ export function EditAppointmentPage() {
             </select>
           </div>
 
-          <div className="edit-appointment-field edit-appointment-field--full">
+          <div className="edit-appointment-field">
             <label htmlFor="professional">
               Técnico responsável
             </label>
 
             <SearchableSelect
               id="professional"
-              value={professionalId}
-              options={professionalOptions}
+              value={
+                professionalId
+              }
+              options={
+                professionalOptions
+              }
               placeholder="Pesquise o responsável..."
               emptyMessage="Nenhum profissional encontrado."
-              onChange={setProfessionalId}
+              onChange={
+                setProfessionalId
+              }
             />
           </div>
 
-          <div className="edit-appointment-field edit-appointment-field--full">
+          <div className="edit-appointment-field">
+            <label htmlFor="serviceAmount">
+              Valor do serviço
+            </label>
+
+            <MoneyInput
+              id="serviceAmount"
+              name="serviceAmount"
+              value={
+                serviceAmount
+              }
+              onChange={
+                setServiceAmount
+              }
+              disabled={
+                paymentRegistered
+              }
+            />
+
+            <span className="edit-appointment-field__help">
+              {paymentRegistered
+                ? 'O pagamento já foi registrado no Financeiro. O valor fica bloqueado para preservar o histórico.'
+                : 'Este valor será reutilizado quando o pagamento for registrado pela Agenda.'}
+            </span>
+          </div>
+
+          <div className="edit-appointment-field">
             <label htmlFor="scheduledAt">
               Data e horário
             </label>
@@ -565,8 +787,12 @@ export function EditAppointmentPage() {
             <input
               id="scheduledAt"
               type="datetime-local"
-              value={scheduledAt}
-              onChange={(event) =>
+              value={
+                scheduledAt
+              }
+              onChange={(
+                event,
+              ) =>
                 setScheduledAt(
                   event.target.value,
                 )
@@ -575,15 +801,19 @@ export function EditAppointmentPage() {
             />
           </div>
 
-          <div className="edit-appointment-field edit-appointment-field--full">
+          <div className="edit-appointment-field">
             <label htmlFor="description">
               Observação
             </label>
 
             <textarea
               id="description"
-              value={description}
-              onChange={(event) =>
+              value={
+                description
+              }
+              onChange={(
+                event,
+              ) =>
                 setDescription(
                   event.target.value,
                 )
@@ -592,6 +822,20 @@ export function EditAppointmentPage() {
             />
           </div>
         </div>
+
+        {paymentRegistered && (
+          <div className="edit-appointment-form__financial-lock">
+            <strong>
+              Pagamento registrado
+            </strong>
+
+            <span>
+              Este compromisso já gerou uma despesa no Financeiro. O valor,
+              cancelamento e exclusão ficam protegidos para preservar o
+              histórico do caixa.
+            </span>
+          </div>
+        )}
 
         {error && (
           <div className="edit-appointment-form__error">
@@ -605,6 +849,7 @@ export function EditAppointmentPage() {
             className="edit-appointment-cancel-event"
             disabled={
               cancelling ||
+              paymentRegistered ||
               appointment.status ===
                 'cancelled'
             }
@@ -612,17 +857,28 @@ export function EditAppointmentPage() {
               handleCancelAppointment
             }
           >
-            <XCircle size={16} />
+            <XCircle
+              size={16}
+            />
+
             Cancelar compromisso
           </button>
 
           <button
             type="button"
             className="edit-appointment-delete"
-            disabled={deleting}
-            onClick={handleDelete}
+            disabled={
+              deleting ||
+              paymentRegistered
+            }
+            onClick={
+              handleDelete
+            }
           >
-            <Trash2 size={16} />
+            <Trash2
+              size={16}
+            />
+
             Excluir
           </button>
         </div>
@@ -638,7 +894,9 @@ export function EditAppointmentPage() {
           <button
             className="edit-appointment-submit"
             type="submit"
-            disabled={saving}
+            disabled={
+              saving
+            }
           >
             {saving
               ? 'Salvando...'

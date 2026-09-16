@@ -12,6 +12,7 @@ export type FinancialTransactionSource =
   | 'inventory_purchase'
   | 'manual'
   | 'adjustment'
+  | 'appointment'
 
 export type FinancialCharge = {
   id: string
@@ -112,4 +113,7 @@ export const FINANCIAL_TRANSACTION_SOURCE_LABELS:
 
     adjustment:
       'Ajuste',
+
+    appointment:
+      'Serviço da agenda',
   }

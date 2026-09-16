@@ -8,12 +8,14 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  CircleDollarSign,
   Clock,
   FileText,
   Pencil,
   Plus,
   UserRound,
   UsersRound,
+  X,
   XCircle,
 } from 'lucide-react'
 
@@ -31,9 +33,9 @@ import {
 } from '../../domain/appointment.ts'
 
 import {
+  completeAppointmentWithFinance,
   getAppointments,
   type AppointmentListItem,
-  updateAppointmentStatus,
 } from './appointmentsService.ts'
 
 import './AgendaPage.css'
@@ -44,10 +46,17 @@ function formatDateLabel(
   return new Intl.DateTimeFormat(
     'pt-BR',
     {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
+      weekday:
+        'long',
+
+      day:
+        '2-digit',
+
+      month:
+        'long',
+
+      year:
+        'numeric',
     },
   ).format(
     new Date(
@@ -62,13 +71,33 @@ function formatTime(
   return new Intl.DateTimeFormat(
     'pt-BR',
     {
-      hour: '2-digit',
-      minute: '2-digit',
+      hour:
+        '2-digit',
+
+      minute:
+        '2-digit',
     },
   ).format(
     new Date(
       scheduledAt,
     ),
+  )
+}
+
+function formatCurrency(
+  value: number,
+) {
+  return new Intl.NumberFormat(
+    'pt-BR',
+    {
+      style:
+        'currency',
+
+      currency:
+        'BRL',
+    },
+  ).format(
+    value,
   )
 }
 
@@ -105,7 +134,8 @@ function getDateKey(
 export function AgendaPage() {
   const [
     searchParams,
-  ] = useSearchParams()
+  ] =
+    useSearchParams()
 
   const selectedAppointmentId =
     searchParams.get(
@@ -134,8 +164,22 @@ export function AgendaPage() {
   >(null)
 
   const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState<
+    string | null
+  >(null)
+
+  const [
     updatingAppointmentId,
     setUpdatingAppointmentId,
+  ] = useState<
+    string | null
+  >(null)
+
+  const [
+    completionAppointmentId,
+    setCompletionAppointmentId,
   ] = useState<
     string | null
   >(null)
@@ -275,22 +319,66 @@ export function AgendaPage() {
       appointments,
     ])
 
-  async function handleComplete(
+  function openCompletionOptions(
     appointmentId: string,
   ) {
     setError(
       null,
     )
 
-    setUpdatingAppointmentId(
+    setSuccessMessage(
+      null,
+    )
+
+    setCompletionAppointmentId(
       appointmentId,
+    )
+  }
+
+  function closeCompletionOptions() {
+    setCompletionAppointmentId(
+      null,
+    )
+  }
+
+  async function handleComplete(
+    appointment: AppointmentListItem,
+    registerPayment: boolean,
+  ) {
+    if (
+      registerPayment &&
+      (
+        appointment.serviceAmount ===
+          null ||
+        appointment.serviceAmount <=
+          0
+      )
+    ) {
+      setError(
+        'Informe o valor do serviço antes de registrar o pagamento.',
+      )
+
+      return
+    }
+
+    setUpdatingAppointmentId(
+      appointment.id,
+    )
+
+    setError(
+      null,
+    )
+
+    setSuccessMessage(
+      null,
     )
 
     try {
-      await updateAppointmentStatus(
-        appointmentId,
-        'completed',
-      )
+      const result =
+        await completeAppointmentWithFinance(
+          appointment.id,
+          registerPayment,
+        )
 
       setAppointments(
         (
@@ -298,17 +386,43 @@ export function AgendaPage() {
         ) =>
           currentAppointments.map(
             (
-              appointment,
+              currentAppointment,
             ) =>
-              appointment.id ===
-              appointmentId
+              currentAppointment.id ===
+              appointment.id
                 ? {
-                    ...appointment,
+                    ...currentAppointment,
+
                     status:
                       'completed',
+
+                    paymentRegistered:
+                      result.paymentRegistered ||
+                      currentAppointment.paymentRegistered,
                   }
-                : appointment,
+                : currentAppointment,
           ),
+      )
+
+      if (
+        registerPayment
+      ) {
+        setSuccessMessage(
+          result.alreadyRegistered
+            ? `O pagamento de ${appointment.title} para ${appointment.horseName ?? 'o cavalo'} já estava registrado no Financeiro.`
+            : `Serviço concluído e pagamento de ${formatCurrency(
+                appointment.serviceAmount ??
+                  0,
+              )} registrado automaticamente no Financeiro.`,
+        )
+      } else {
+        setSuccessMessage(
+          'Serviço concluído. Nenhuma saída de caixa foi registrada.',
+        )
+      }
+
+      setCompletionAppointmentId(
+        null,
       )
     } catch (error) {
       const message =
@@ -324,6 +438,15 @@ export function AgendaPage() {
         null,
       )
     }
+  }
+
+  async function handleRegisterPayment(
+    appointment: AppointmentListItem,
+  ) {
+    await handleComplete(
+      appointment,
+      true,
+    )
   }
 
   const appointmentCountLabel =
@@ -381,6 +504,18 @@ export function AgendaPage() {
       {error && (
         <div className="agenda-state agenda-state--error">
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="agenda-state agenda-state--success">
+          <CheckCircle2
+            size={17}
+          />
+
+          <span>
+            {successMessage}
+          </span>
         </div>
       )}
 
@@ -449,6 +584,26 @@ export function AgendaPage() {
                         const isSelected =
                           appointment.id ===
                           selectedAppointmentId
+
+                        const isProcessing =
+                          updatingAppointmentId ===
+                          appointment.id
+
+                        const completionOpen =
+                          completionAppointmentId ===
+                          appointment.id
+
+                        const hasServiceAmount =
+                          appointment.serviceAmount !==
+                            null &&
+                          appointment.serviceAmount >
+                            0
+
+                        const awaitingPayment =
+                          appointment.status ===
+                            'completed' &&
+                          hasServiceAmount &&
+                          !appointment.paymentRegistered
 
                         return (
                           <article
@@ -539,6 +694,40 @@ export function AgendaPage() {
                                   </div>
                                 </div>
 
+                                {hasServiceAmount && (
+                                  <div className="agenda-item__info">
+                                    <CircleDollarSign
+                                      size={15}
+                                      strokeWidth={1.8}
+                                    />
+
+                                    <div>
+                                      <span>
+                                        Valor do serviço
+                                      </span>
+
+                                      <strong>
+                                        {formatCurrency(
+                                          appointment.serviceAmount ??
+                                            0,
+                                        )}
+                                      </strong>
+
+                                      {appointment.paymentRegistered && (
+                                        <small className="agenda-item__financial-status agenda-item__financial-status--paid">
+                                          Pagamento registrado
+                                        </small>
+                                      )}
+
+                                      {awaitingPayment && (
+                                        <small className="agenda-item__financial-status agenda-item__financial-status--pending">
+                                          Aguardando pagamento
+                                        </small>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
                                 {appointment.description && (
                                   <div className="agenda-item__info agenda-item__info--description">
                                     <FileText
@@ -580,11 +769,10 @@ export function AgendaPage() {
                                   type="button"
                                   className="agenda-item__complete"
                                   disabled={
-                                    updatingAppointmentId ===
-                                    appointment.id
+                                    isProcessing
                                   }
                                   onClick={() =>
-                                    handleComplete(
+                                    openCompletionOptions(
                                       appointment.id,
                                     )
                                   }
@@ -593,15 +781,36 @@ export function AgendaPage() {
                                     size={15}
                                   />
 
-                                  {updatingAppointmentId ===
-                                  appointment.id
-                                    ? 'Salvando...'
-                                    : 'Concluir'}
+                                  Concluir
+                                </button>
+                              )}
+
+                              {awaitingPayment && (
+                                <button
+                                  type="button"
+                                  className="agenda-item__payment"
+                                  disabled={
+                                    isProcessing
+                                  }
+                                  onClick={() =>
+                                    handleRegisterPayment(
+                                      appointment,
+                                    )
+                                  }
+                                >
+                                  <CircleDollarSign
+                                    size={15}
+                                  />
+
+                                  {isProcessing
+                                    ? 'Registrando...'
+                                    : 'Registrar pagamento'}
                                 </button>
                               )}
 
                               {appointment.status ===
-                                'completed' && (
+                                'completed' &&
+                                !awaitingPayment && (
                                 <CheckCircle2
                                   className="agenda-item__status-icon agenda-item__status-icon--completed"
                                   size={19}
@@ -616,6 +825,105 @@ export function AgendaPage() {
                                 />
                               )}
                             </div>
+
+                            {completionOpen &&
+                              appointment.status ===
+                                'pending' && (
+                                <div className="agenda-item__completion-panel">
+                                  <div className="agenda-item__completion-text">
+                                    <strong>
+                                      Serviço realizado?
+                                    </strong>
+
+                                    {hasServiceAmount ? (
+                                      <span>
+                                        Se o pagamento de{' '}
+                                        {formatCurrency(
+                                          appointment.serviceAmount ??
+                                            0,
+                                        )}{' '}
+                                        já foi feito, o aplicativo pode
+                                        registrar a despesa no Financeiro
+                                        agora.
+                                      </span>
+                                    ) : (
+                                      <span>
+                                        Este compromisso não possui valor
+                                        cadastrado. Você pode concluí-lo sem
+                                        movimentar o caixa.
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="agenda-item__completion-actions">
+                                    {hasServiceAmount && (
+                                      <button
+                                        type="button"
+                                        className="agenda-item__completion-pay"
+                                        disabled={
+                                          isProcessing
+                                        }
+                                        onClick={() =>
+                                          handleComplete(
+                                            appointment,
+                                            true,
+                                          )
+                                        }
+                                      >
+                                        <CircleDollarSign
+                                          size={15}
+                                        />
+
+                                        {isProcessing
+                                          ? 'Registrando...'
+                                          : `Concluir e registrar ${formatCurrency(
+                                              appointment.serviceAmount ??
+                                                0,
+                                            )}`}
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      className="agenda-item__completion-only"
+                                      disabled={
+                                        isProcessing
+                                      }
+                                      onClick={() =>
+                                        handleComplete(
+                                          appointment,
+                                          false,
+                                        )
+                                      }
+                                    >
+                                      <Check
+                                        size={15}
+                                      />
+
+                                      {isProcessing
+                                        ? 'Concluindo...'
+                                        : 'Concluir sem pagamento'}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      className="agenda-item__completion-cancel"
+                                      disabled={
+                                        isProcessing
+                                      }
+                                      onClick={
+                                        closeCompletionOptions
+                                      }
+                                    >
+                                      <X
+                                        size={15}
+                                      />
+
+                                      Voltar
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                           </article>
                         )
                       },

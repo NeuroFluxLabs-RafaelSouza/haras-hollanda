@@ -23,6 +23,10 @@
   font-weight: 700;
 }
 
+.edit-appointment-header__back:hover {
+  text-decoration: underline;
+}
+
 .edit-appointment-form {
   margin-top: 36px;
 
@@ -77,10 +81,15 @@
   padding: 26px;
 
   display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
   gap: 20px;
 }
 
 .edit-appointment-field {
+  min-width: 0;
+
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -129,6 +138,50 @@
 
   box-shadow:
     0 0 0 3px rgba(49, 83, 67, 0.08);
+}
+
+.edit-appointment-field .money-input {
+  width: 100%;
+  min-height: 44px;
+}
+
+.edit-appointment-field .money-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.edit-appointment-field__help {
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.edit-appointment-form__financial-lock {
+  margin: 0 26px 20px;
+  padding: 13px 14px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  border: 1px solid rgba(63, 122, 87, 0.16);
+  border-radius: 11px;
+
+  background: rgba(63, 122, 87, 0.055);
+}
+
+.edit-appointment-form__financial-lock strong {
+  color: var(--color-success);
+
+  font-size: 11px;
+}
+
+.edit-appointment-form__financial-lock span {
+  color: var(--color-text-muted);
+
+  font-size: 10.5px;
+  line-height: 1.5;
 }
 
 .edit-appointment-form__error {
@@ -184,6 +237,12 @@
   color: var(--color-danger);
 }
 
+.edit-appointment-cancel-event:disabled,
+.edit-appointment-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .edit-appointment-form__actions {
   padding: 20px 26px;
 
@@ -228,6 +287,11 @@
   cursor: pointer;
 }
 
+.edit-appointment-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .edit-appointment-state {
   padding: 22px;
 
@@ -240,4 +304,41 @@
 
 .edit-appointment-state--error {
   color: var(--color-danger);
+}
+
+@media (max-width: 720px) {
+  .edit-appointment-form__grid {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .edit-appointment-form__header {
+    padding: 20px;
+  }
+
+  .edit-appointment-form__danger {
+    margin: 0 20px 20px;
+
+    flex-direction: column;
+  }
+
+  .edit-appointment-cancel-event,
+  .edit-appointment-delete {
+    justify-content: center;
+  }
+
+  .edit-appointment-form__financial-lock {
+    margin: 0 20px 20px;
+  }
+
+  .edit-appointment-form__actions {
+    padding: 18px 20px;
+
+    flex-direction: column-reverse;
+  }
+
+  .edit-appointment-back,
+  .edit-appointment-submit {
+    width: 100%;
+  }
 }

@@ -125,14 +125,6 @@
   border-top: 1px solid var(--color-border);
 }
 
-/*
-  Compromisso selecionado a partir do Dashboard.
-
-  Mantém exatamente a mesma linguagem visual
-  usada no hover do compromisso no Dashboard:
-  fundo dourado suave + faixa dourada lateral.
-*/
-
 .agenda-item--selected {
   background: rgba(201, 169, 107, 0.1);
 
@@ -303,6 +295,27 @@
   font-size: 10px;
 }
 
+.agenda-item__financial-status {
+  width: fit-content;
+  margin-top: 2px;
+  padding: 3px 6px;
+
+  border-radius: 999px;
+
+  font-size: 8.5px !important;
+  font-weight: 700;
+}
+
+.agenda-item__financial-status--paid {
+  background: rgba(63, 122, 87, 0.1);
+  color: var(--color-success) !important;
+}
+
+.agenda-item__financial-status--pending {
+  background: rgba(197, 139, 42, 0.1);
+  color: var(--color-warning) !important;
+}
+
 .agenda-item__info--description {
   grid-column: 1 / -1;
 }
@@ -317,7 +330,7 @@
 }
 
 .agenda-item__actions {
-  min-width: 94px;
+  min-width: 128px;
 
   display: flex;
   flex-direction: column;
@@ -326,7 +339,8 @@
 }
 
 .agenda-item__edit,
-.agenda-item__complete {
+.agenda-item__complete,
+.agenda-item__payment {
   min-height: 34px;
   padding: 0 11px;
 
@@ -366,7 +380,21 @@
   background: rgba(63, 122, 87, 0.12);
 }
 
-.agenda-item__complete:disabled {
+.agenda-item__payment {
+  border: 1px solid rgba(201, 169, 107, 0.3);
+
+  background: rgba(201, 169, 107, 0.1);
+  color: var(--color-forest);
+
+  cursor: pointer;
+}
+
+.agenda-item__payment:hover:not(:disabled) {
+  background: rgba(201, 169, 107, 0.17);
+}
+
+.agenda-item__complete:disabled,
+.agenda-item__payment:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -380,6 +408,101 @@
 .agenda-item__status-icon--cancelled {
   align-self: center;
 
+  color: var(--color-text-muted);
+}
+
+.agenda-item__completion-panel {
+  grid-column: 1 / -1;
+
+  padding: 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+
+  border: 1px solid rgba(49, 83, 67, 0.12);
+  border-radius: 11px;
+
+  background: rgba(49, 83, 67, 0.045);
+}
+
+.agenda-item__completion-text {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agenda-item__completion-text strong {
+  color: var(--color-forest);
+
+  font-size: 11px;
+}
+
+.agenda-item__completion-text span {
+  max-width: 500px;
+
+  color: var(--color-text-muted);
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.agenda-item__completion-actions {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.agenda-item__completion-actions button {
+  min-height: 35px;
+  padding: 0 10px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  border-radius: 9px;
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.agenda-item__completion-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.agenda-item__completion-pay {
+  border: 0;
+
+  background: var(--color-forest);
+  color: #ffffff;
+}
+
+.agenda-item__completion-pay:hover:not(:disabled) {
+  background: var(--color-moss);
+}
+
+.agenda-item__completion-only {
+  border: 1px solid rgba(63, 122, 87, 0.18);
+
+  background: rgba(63, 122, 87, 0.07);
+  color: var(--color-success);
+}
+
+.agenda-item__completion-cancel {
+  border: 1px solid var(--color-border);
+
+  background: var(--color-surface);
   color: var(--color-text-muted);
 }
 
@@ -398,6 +521,21 @@
 
 .agenda-state--error {
   color: var(--color-danger);
+}
+
+.agenda-state--success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  border-color: rgba(63, 122, 87, 0.16);
+
+  background: rgba(63, 122, 87, 0.055);
+  color: var(--color-success);
+}
+
+.agenda-state--success span {
+  color: var(--color-text-muted);
 }
 
 .agenda-empty {
@@ -431,6 +569,17 @@
   line-height: 1.6;
 }
 
+@media (max-width: 900px) {
+  .agenda-item__completion-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .agenda-item__completion-actions {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 720px) {
   .agenda-toolbar {
     align-items: stretch;
@@ -462,5 +611,17 @@
   .agenda-item__actions {
     align-items: stretch;
     justify-content: flex-start;
+  }
+
+  .agenda-item__completion-panel {
+    grid-column: auto;
+  }
+
+  .agenda-item__completion-actions {
+    flex-direction: column;
+  }
+
+  .agenda-item__completion-actions button {
+    width: 100%;
   }
 }
