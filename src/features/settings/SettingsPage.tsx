@@ -1,10 +1,8 @@
 import {
   useEffect,
   useState,
-} from 'react'
-
-import type {
-  SubmitEvent,
+  type ChangeEvent,
+  type SubmitEvent,
 } from 'react'
 
 import {
@@ -12,13 +10,20 @@ import {
   Boxes,
   Building2,
   CheckCircle2,
+  ImagePlus,
   Save,
   WalletCards,
 } from 'lucide-react'
 
 import {
+  ImageCropper,
+} from '../../components/ui/ImageCropper.tsx'
+
+import {
   getAppSettings,
+  getHarasLogoUrl,
   updateAppSettings,
+  uploadHarasLogo,
 } from './settingsService.ts'
 
 import './SettingsPage.css'
@@ -27,32 +32,65 @@ export function SettingsPage() {
   const [
     harasName,
     setHarasName,
-  ] = useState('')
+  ] = useState(
+    'Haras Hollanda',
+  )
+
+  const [
+    logoUrl,
+    setLogoUrl,
+  ] = useState<
+    string | null
+  >(null)
+
+  const [
+    pendingLogoFile,
+    setPendingLogoFile,
+  ] = useState<
+    File | null
+  >(null)
 
   const [
     monthlyDueDay,
     setMonthlyDueDay,
-  ] = useState(10)
+  ] = useState(
+    10,
+  )
 
   const [
     financialAlertDays,
     setFinancialAlertDays,
-  ] = useState(3)
+  ] = useState(
+    3,
+  )
 
   const [
     inventoryReplenishmentDays,
     setInventoryReplenishmentDays,
-  ] = useState(7)
+  ] = useState(
+    7,
+  )
 
   const [
     loading,
     setLoading,
-  ] = useState(true)
+  ] = useState(
+    true,
+  )
 
   const [
     saving,
     setSaving,
-  ] = useState(false)
+  ] = useState(
+    false,
+  )
+
+  const [
+    uploadingLogo,
+    setUploadingLogo,
+  ] = useState(
+    false,
+  )
 
   const [
     error,
@@ -74,12 +112,13 @@ export function SettingsPage() {
 
     async function loadSettings() {
       try {
-        setLoading(
-          true,
-        )
-
         const settings =
           await getAppSettings()
+
+        const currentLogoUrl =
+          await getHarasLogoUrl(
+            settings.logoPath,
+          )
 
         if (
           !isMounted
@@ -89,6 +128,10 @@ export function SettingsPage() {
 
         setHarasName(
           settings.harasName,
+        )
+
+        setLogoUrl(
+          currentLogoUrl,
         )
 
         setMonthlyDueDay(
@@ -136,8 +179,89 @@ export function SettingsPage() {
     }
   }, [])
 
+  function handleLogoChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file =
+      event.target.files?.[0]
+
+    event.target.value =
+      ''
+
+    if (!file) {
+      return
+    }
+
+    setError(
+      null,
+    )
+
+    setSuccess(
+      null,
+    )
+
+    setPendingLogoFile(
+      file,
+    )
+  }
+
+  async function handleAdjustedLogo(
+    adjustedFile: File,
+  ) {
+    try {
+      setUploadingLogo(
+        true,
+      )
+
+      setError(
+        null,
+      )
+
+      setSuccess(
+        null,
+      )
+
+      const settings =
+        await uploadHarasLogo(
+          adjustedFile,
+        )
+
+      const uploadedLogoUrl =
+        await getHarasLogoUrl(
+          settings.logoPath,
+        )
+
+      setLogoUrl(
+        uploadedLogoUrl,
+      )
+
+      setPendingLogoFile(
+        null,
+      )
+
+      setSuccess(
+        'Logo atualizada com sucesso.',
+      )
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível enviar a logo.'
+
+      setError(
+        message,
+      )
+
+      throw error
+    } finally {
+      setUploadingLogo(
+        false,
+      )
+    }
+  }
+
   async function handleSubmit(
-    event: SubmitEvent,
+    event: SubmitEvent<HTMLFormElement>,
   ) {
     event.preventDefault()
 
@@ -157,8 +281,11 @@ export function SettingsPage() {
       const settings =
         await updateAppSettings({
           harasName,
+
           monthlyDueDay,
+
           financialAlertDays,
+
           inventoryReplenishmentDays,
         })
 
@@ -198,195 +325,341 @@ export function SettingsPage() {
   }
 
   return (
-    <section className="settings-page">
-      <header className="page-header">
-        <p className="page-header__eyebrow">
-          Preferências do sistema
-        </p>
+    <>
+      <section className="settings-page">
+        <header className="page-header">
+          <p className="page-header__eyebrow">
+            Preferências do sistema
+          </p>
 
-        <h1 className="page-header__title">
-          Configurações
-        </h1>
+          <h1 className="page-header__title">
+            Configurações
+          </h1>
 
-        <p className="page-header__description">
-          Defina as regras gerais usadas pelo Haras Hollanda.
-        </p>
-      </header>
+          <p className="page-header__description">
+            Gerencie os dados do haras e as regras usadas automaticamente
+            pelo sistema.
+          </p>
+        </header>
 
-      {error && (
-        <div className="settings-message settings-message--error">
-          <AlertTriangle
-            size={18}
-            strokeWidth={1.8}
-          />
-
-          <div>
-            <strong>
-              Não foi possível atualizar as configurações
-            </strong>
+        {error && (
+          <div className="settings-message settings-message--error">
+            <AlertTriangle
+              size={18}
+              strokeWidth={
+                1.8
+              }
+            />
 
             <span>
               {error}
             </span>
           </div>
-        </div>
-      )}
+        )}
 
-      {success && (
-        <div className="settings-message settings-message--success">
-          <CheckCircle2
-            size={18}
-            strokeWidth={1.8}
-          />
-
-          <div>
-            <strong>
-              Configurações atualizadas
-            </strong>
+        {success && (
+          <div className="settings-message settings-message--success">
+            <CheckCircle2
+              size={18}
+              strokeWidth={
+                1.8
+              }
+            />
 
             <span>
               {success}
             </span>
           </div>
-        </div>
-      )}
+        )}
 
-      {loading ? (
-        <div className="settings-state">
-          Carregando configurações...
-        </div>
-      ) : (
-        <form
-          className="settings-form"
-          onSubmit={
-            handleSubmit
-          }
-        >
-          <section className="settings-card">
-            <div className="settings-card__header">
-              <div className="settings-card__icon">
-                <Building2
-                  size={19}
-                  strokeWidth={1.8}
-                />
+        {loading ? (
+          <div className="settings-loading">
+            Carregando configurações...
+          </div>
+        ) : (
+          <form
+            className="settings-form"
+            onSubmit={
+              handleSubmit
+            }
+          >
+            <section className="settings-card">
+              <header className="settings-card__header">
+                <div className="settings-card__icon">
+                  <Building2
+                    size={19}
+                    strokeWidth={
+                      1.8
+                    }
+                  />
+                </div>
+
+                <div>
+                  <span>
+                    Identidade
+                  </span>
+
+                  <h2>
+                    Dados do haras
+                  </h2>
+
+                  <p>
+                    Informações usadas para identificar o sistema.
+                  </p>
+                </div>
+              </header>
+
+              <div className="settings-branding">
+                <div className="settings-logo-preview">
+                  {logoUrl ? (
+                    <img
+                      src={
+                        logoUrl
+                      }
+                      alt={`Logo de ${harasName}`}
+                    />
+                  ) : (
+                    <Building2
+                      size={28}
+                      strokeWidth={
+                        1.6
+                      }
+                    />
+                  )}
+                </div>
+
+                <div className="settings-logo-content">
+                  <strong>
+                    Logo do haras
+                  </strong>
+
+                  <p>
+                    Envie a imagem e ajuste o enquadramento antes de salvar.
+                  </p>
+
+                  <div className="settings-logo-actions">
+                    <label
+                      className={`settings-logo-button ${
+                        uploadingLogo
+                          ? 'settings-logo-button--disabled'
+                          : ''
+                      }`}
+                      htmlFor="harasLogo"
+                    >
+                      <ImagePlus
+                        size={16}
+                        strokeWidth={
+                          1.8
+                        }
+                      />
+
+                      {uploadingLogo
+                        ? 'Salvando...'
+                        : logoUrl
+                          ? 'Trocar logo'
+                          : 'Enviar logo'}
+                    </label>
+
+                    <input
+                      className="settings-logo-input"
+                      id="harasLogo"
+                      name="harasLogo"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={
+                        handleLogoChange
+                      }
+                      disabled={
+                        uploadingLogo
+                      }
+                    />
+                  </div>
+
+                  <span className="settings-logo-help">
+                    JPG, PNG ou WebP. Máximo de 5 MB.
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <span>
-                  Identidade
-                </span>
-
-                <h2>
-                  Dados do haras
-                </h2>
-
-                <p>
-                  Informações gerais que identificam o estabelecimento.
-                </p>
-              </div>
-            </div>
-
-            <div className="settings-field">
-              <label htmlFor="haras-name">
-                Nome do haras
-              </label>
-
-              <input
-                id="haras-name"
-                type="text"
-                value={
-                  harasName
-                }
-                onChange={(
-                  event,
-                ) =>
-                  setHarasName(
-                    event.target.value,
-                  )
-                }
-                placeholder="Ex: Haras Hollanda"
-                required
-              />
-
-              <span>
-                Esse nome poderá ser reutilizado em outras áreas do sistema.
-              </span>
-            </div>
-          </section>
-
-          <section className="settings-card">
-            <div className="settings-card__header">
-              <div className="settings-card__icon">
-                <WalletCards
-                  size={19}
-                  strokeWidth={1.8}
-                />
-              </div>
-
-              <div>
-                <span>
-                  Financeiro
-                </span>
-
-                <h2>
-                  Mensalidades
-                </h2>
-
-                <p>
-                  Defina quando as mensalidades vencem e quando o sistema deve avisar.
-                </p>
-              </div>
-            </div>
-
-            <div className="settings-grid">
               <div className="settings-field">
-                <label htmlFor="monthly-due-day">
-                  Dia padrão de vencimento
+                <label htmlFor="harasName">
+                  Nome do haras
                 </label>
 
                 <input
-                  id="monthly-due-day"
-                  type="number"
-                  min="1"
-                  max="28"
+                  id="harasName"
+                  name="harasName"
+                  type="text"
                   value={
-                    monthlyDueDay
+                    harasName
                   }
                   onChange={(
                     event,
                   ) =>
-                    setMonthlyDueDay(
-                      Number(
-                        event.target.value,
-                      ),
+                    setHarasName(
+                      event.target.value,
                     )
                   }
+                  autoComplete="organization"
                   required
                 />
 
                 <span>
-                  Usado nas novas cobranças mensais.
+                  Esse nome aparece na identidade visual do sistema.
                 </span>
               </div>
+            </section>
+
+            <section className="settings-card">
+              <header className="settings-card__header">
+                <div className="settings-card__icon">
+                  <WalletCards
+                    size={19}
+                    strokeWidth={
+                      1.8
+                    }
+                  />
+                </div>
+
+                <div>
+                  <span>
+                    Financeiro
+                  </span>
+
+                  <h2>
+                    Mensalidades
+                  </h2>
+
+                  <p>
+                    Defina como o sistema prepara e sinaliza as cobranças.
+                  </p>
+                </div>
+              </header>
+
+              <div className="settings-grid">
+                <div className="settings-field">
+                  <label htmlFor="monthlyDueDay">
+                    Dia padrão de vencimento
+                  </label>
+
+                  <div className="settings-input-unit">
+                    <input
+                      id="monthlyDueDay"
+                      name="monthlyDueDay"
+                      type="number"
+                      min={1}
+                      max={28}
+                      value={
+                        monthlyDueDay
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setMonthlyDueDay(
+                          Number(
+                            event.target.value,
+                          ),
+                        )
+                      }
+                      required
+                    />
+
+                    <span>
+                      dia
+                    </span>
+                  </div>
+
+                  <span>
+                    Usado nas novas cobranças mensais.
+                  </span>
+                </div>
+
+                <div className="settings-field">
+                  <label htmlFor="financialAlertDays">
+                    Avisar com antecedência
+                  </label>
+
+                  <div className="settings-input-unit">
+                    <input
+                      id="financialAlertDays"
+                      name="financialAlertDays"
+                      type="number"
+                      min={0}
+                      max={15}
+                      value={
+                        financialAlertDays
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setFinancialAlertDays(
+                          Number(
+                            event.target.value,
+                          ),
+                        )
+                      }
+                      required
+                    />
+
+                    <span>
+                      dias
+                    </span>
+                  </div>
+
+                  <span>
+                    Define quando o Dashboard começa a avisar sobre
+                    vencimentos próximos.
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section className="settings-card">
+              <header className="settings-card__header">
+                <div className="settings-card__icon">
+                  <Boxes
+                    size={19}
+                    strokeWidth={
+                      1.8
+                    }
+                  />
+                </div>
+
+                <div>
+                  <span>
+                    Estoque
+                  </span>
+
+                  <h2>
+                    Planejamento de reposição
+                  </h2>
+
+                  <p>
+                    Defina com quanta antecedência uma compra deve ser
+                    recomendada.
+                  </p>
+                </div>
+              </header>
 
               <div className="settings-field">
-                <label htmlFor="financial-alert-days">
-                  Avisar com antecedência
+                <label htmlFor="inventoryReplenishmentDays">
+                  Autonomia mínima desejada
                 </label>
 
-                <div className="settings-field__unit">
+                <div className="settings-input-unit">
                   <input
-                    id="financial-alert-days"
+                    id="inventoryReplenishmentDays"
+                    name="inventoryReplenishmentDays"
                     type="number"
-                    min="0"
-                    max="15"
+                    min={1}
+                    max={60}
                     value={
-                      financialAlertDays
+                      inventoryReplenishmentDays
                     }
                     onChange={(
                       event,
                     ) =>
-                      setFinancialAlertDays(
+                      setInventoryReplenishmentDays(
                         Number(
                           event.target.value,
                         ),
@@ -401,97 +674,57 @@ export function SettingsPage() {
                 </div>
 
                 <span>
-                  Define quando o Dashboard começa a mostrar o próximo vencimento.
+                  Quando a autonomia prevista chegar a esse valor, o sistema
+                  recomenda reposição.
                 </span>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="settings-card">
-            <div className="settings-card__header">
-              <div className="settings-card__icon">
-                <Boxes
-                  size={19}
-                  strokeWidth={1.8}
-                />
-              </div>
-
-              <div>
-                <span>
-                  Estoque
-                </span>
-
-                <h2>
-                  Planejamento de reposição
-                </h2>
-
-                <p>
-                  Controle com quantos dias de autonomia o estoque deve gerar atenção.
-                </p>
-              </div>
-            </div>
-
-            <div className="settings-field settings-field--compact">
-              <label htmlFor="inventory-replenishment-days">
-                Autonomia mínima desejada
-              </label>
-
-              <div className="settings-field__unit">
-                <input
-                  id="inventory-replenishment-days"
-                  type="number"
-                  min="1"
-                  max="60"
-                  value={
-                    inventoryReplenishmentDays
+            <footer className="settings-actions">
+              <button
+                className="settings-save-button"
+                type="submit"
+                disabled={
+                  saving ||
+                  uploadingLogo
+                }
+              >
+                <Save
+                  size={17}
+                  strokeWidth={
+                    1.8
                   }
-                  onChange={(
-                    event,
-                  ) =>
-                    setInventoryReplenishmentDays(
-                      Number(
-                        event.target.value,
-                      ),
-                    )
-                  }
-                  required
                 />
 
-                <span>
-                  dias
-                </span>
-              </div>
+                {saving
+                  ? 'Salvando...'
+                  : 'Salvar configurações'}
+              </button>
+            </footer>
+          </form>
+        )}
+      </section>
 
-              <span>
-                Abaixo desse limite o sistema poderá recomendar reposição.
-              </span>
-            </div>
-          </section>
-
-          <footer className="settings-actions">
-            <div className="settings-actions__note">
-              Alterações futuras passam a utilizar essas preferências.
-            </div>
-
-            <button
-              className="settings-save-button"
-              type="submit"
-              disabled={
-                saving
-              }
-            >
-              <Save
-                size={16}
-                strokeWidth={1.9}
-              />
-
-              {saving
-                ? 'Salvando...'
-                : 'Salvar configurações'}
-            </button>
-          </footer>
-        </form>
+      {pendingLogoFile && (
+        <ImageCropper
+          file={
+            pendingLogoFile
+          }
+          title="Ajustar logo"
+          description="O círculo mostra como a imagem ficará na barra lateral."
+          cropShape="circle"
+          confirmLabel="Salvar logo"
+          onCancel={
+            () =>
+              setPendingLogoFile(
+                null,
+              )
+          }
+          onConfirm={
+            handleAdjustedLogo
+          }
+        />
       )}
-    </section>
+    </>
   )
 }

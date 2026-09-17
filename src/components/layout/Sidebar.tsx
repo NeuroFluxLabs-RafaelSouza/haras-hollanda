@@ -21,7 +21,9 @@ import {
 } from 'lucide-react'
 
 import {
+  APP_SETTINGS_UPDATED_EVENT,
   getAppSettings,
+  getHarasLogoUrl,
 } from '../../features/settings/settingsService.ts'
 
 import './Sidebar.css'
@@ -128,14 +130,26 @@ export function Sidebar({
     DEFAULT_HARAS_NAME,
   )
 
+  const [
+    logoUrl,
+    setLogoUrl,
+  ] = useState<
+    string | null
+  >(null)
+
   useEffect(() => {
     let isMounted =
       true
 
-    async function loadHarasName() {
+    async function loadIdentity() {
       try {
         const settings =
           await getAppSettings()
+
+        const currentLogoUrl =
+          await getHarasLogoUrl(
+            settings.logoPath,
+          )
 
         if (
           !isMounted
@@ -146,22 +160,46 @@ export function Sidebar({
         setHarasName(
           settings.harasName,
         )
+
+        setLogoUrl(
+          currentLogoUrl,
+        )
       } catch {
         if (
-          isMounted
+          !isMounted
         ) {
-          setHarasName(
-            DEFAULT_HARAS_NAME,
-          )
+          return
         }
+
+        setHarasName(
+          DEFAULT_HARAS_NAME,
+        )
+
+        setLogoUrl(
+          null,
+        )
       }
     }
 
-    loadHarasName()
+    function handleSettingsUpdated() {
+      loadIdentity()
+    }
+
+    loadIdentity()
+
+    window.addEventListener(
+      APP_SETTINGS_UPDATED_EVENT,
+      handleSettingsUpdated,
+    )
 
     return () => {
       isMounted =
         false
+
+      window.removeEventListener(
+        APP_SETTINGS_UPDATED_EVENT,
+        handleSettingsUpdated,
+      )
     }
   }, [])
 
@@ -174,7 +212,17 @@ export function Sidebar({
     <aside className="sidebar">
       <div className="sidebar__brand">
         <div className="sidebar__brand-mark">
-          {harasInitials}
+          {logoUrl ? (
+            <img
+              className="sidebar__brand-logo"
+              src={
+                logoUrl
+              }
+              alt={`Logo de ${harasName}`}
+            />
+          ) : (
+            harasInitials
+          )}
         </div>
 
         <div>

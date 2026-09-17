@@ -1,6 +1,7 @@
 import type {
   CreateHorseInput,
   Horse,
+  HorseOwnershipType,
   HorseSex,
   UpdateHorseInput,
 } from '../../domain/horse.ts'
@@ -19,9 +20,12 @@ type HorseRow = {
   name: string
   breed: string | null
   sex: HorseSex
-  client_id: string
+  birth_date: string | null
+  ownership_type: HorseOwnershipType
+  client_id: string | null
   stall_id: string | null
-  monthly_fee: number | null
+  monthly_fee: number | string | null
+  photo_path: string | null
   active: boolean
   created_at: string
 }
@@ -63,6 +67,23 @@ type CorrectHorseMonthlyFeeRow = {
   current_charge_updated: boolean
 }
 
+type SetHorsePhotoPathRow = {
+  horse_id: string
+  saved_photo_path: string
+}
+
+type HorseUpdatePayload = {
+  name: string
+  breed: string | null
+  sex: HorseSex
+  client_id: string | null
+  stall_id: string | null
+  monthly_fee: number | null
+  active: boolean
+  birth_date?: string | null
+  ownership_type?: HorseOwnershipType
+}
+
 export type HorseListItem =
   Horse & {
     clientName: string
@@ -70,14 +91,38 @@ export type HorseListItem =
     stallStatus: StallStatus | null
   }
 
+export type HorsePhotoUploadResult = {
+  photoPath: string
+  photoUrl: string
+}
+
+const MEDIA_BUCKET =
+  'haras-media'
+
+const MAX_IMAGE_SIZE_BYTES =
+  5 * 1024 * 1024
+
+const HORSE_PHOTO_SIGNED_URL_DURATION =
+  60 * 60 * 24
+
+const ALLOWED_HORSE_PHOTO_TYPES =
+  new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ])
+
 const horseSelect = `
   id,
   name,
   breed,
   sex,
+  birth_date,
+  ownership_type,
   client_id,
   stall_id,
   monthly_fee,
+  photo_path,
   active,
   created_at
 `
@@ -87,9 +132,12 @@ const horseListSelect = `
   name,
   breed,
   sex,
+  birth_date,
+  ownership_type,
   client_id,
   stall_id,
   monthly_fee,
+  photo_path,
   active,
   created_at,
   client:clients (
@@ -138,6 +186,12 @@ function mapHorse(
     sex:
       row.sex,
 
+    birthDate:
+      row.birth_date,
+
+    ownershipType:
+      row.ownership_type,
+
     clientId:
       row.client_id,
 
@@ -151,6 +205,9 @@ function mapHorse(
         : Number(
             row.monthly_fee,
           ),
+
+    photoPath:
+      row.photo_path,
 
     active:
       row.active,
@@ -180,7 +237,12 @@ function mapHorseListItem(
 
     clientName:
       client?.name ??
-      'Cliente não identificado',
+      (
+        row.ownership_type ===
+        'haras'
+          ? 'Haras Hollanda'
+          : 'Cliente não identificado'
+      ),
 
     stallName:
       stall?.name ??
@@ -216,6 +278,194 @@ function mapAvailableStall(
   }
 }
 
+function validateHorsePhotoFile(
+  file: File,
+) {
+  if (
+    !ALLOWED_HORSE_PHOTO_TYPES.has(
+      file.type,
+    )
+  ) {
+    throw new Error(
+      'Use uma imagem JPG, PNG ou WebP.',
+    )
+  }
+
+  if (
+    file.size >
+    MAX_IMAGE_SIZE_BYTES
+  ) {
+    throw new Error(
+      'A foto deve ter no máximo 5 MB.',
+    )
+  }
+}
+
+export async function getHorsePhotoUrl(
+  photoPath: string | null,
+): Promise<string | null> {
+  if (!photoPath) {
+    return null
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase.storage
+    .from(
+      MEDIA_BUCKET,
+    )
+    .createSignedUrl(
+      photoPath,
+      HORSE_PHOTO_SIGNED_URL_DURATION,
+    )
+
+  if (error) {
+    throw new Error(
+      `Erro ao carregar foto do cavalo: ${error.message}`,
+    )
+  }
+
+  if (
+    !data.signedUrl
+  ) {
+    throw new Error(
+      'O Storage não retornou uma URL para a foto do cavalo.',
+    )
+  }
+
+  return data.signedUrl
+}
+
+export async function uploadHorsePhoto(
+  horseId: string,
+  currentPhotoPath: string | null,
+  file: File,
+): Promise<HorsePhotoUploadResult> {
+  validateHorsePhotoFile(
+    file,
+  )
+
+  const extension =
+    file.type ===
+    'image/png'
+      ? 'png'
+      : file.type ===
+          'image/jpeg'
+        ? 'jpg'
+        : 'webp'
+
+  const photoPath =
+    `horses/${horseId}/photo-${Date.now()}.${extension}`
+
+  const {
+    error: uploadError,
+  } = await supabase.storage
+    .from(
+      MEDIA_BUCKET,
+    )
+    .upload(
+      photoPath,
+      file,
+      {
+        contentType:
+          file.type,
+
+        upsert:
+          false,
+      },
+    )
+
+  if (uploadError) {
+    throw new Error(
+      `Erro ao enviar foto do cavalo: ${uploadError.message}`,
+    )
+  }
+
+  const {
+    data: updateData,
+    error: updateError,
+  } = await supabase.rpc(
+    'set_horse_photo_path',
+    {
+      p_horse_id:
+        horseId,
+
+      p_photo_path:
+        photoPath,
+    },
+  )
+
+  if (updateError) {
+    await supabase.storage
+      .from(
+        MEDIA_BUCKET,
+      )
+      .remove([
+        photoPath,
+      ])
+
+    throw new Error(
+      `Erro ao vincular foto ao cavalo: ${updateError.message}`,
+    )
+  }
+
+  const updateResult =
+    updateData?.[0] as
+      | SetHorsePhotoPathRow
+      | undefined
+
+  if (
+    !updateResult ||
+    updateResult.horse_id !==
+      horseId ||
+    updateResult.saved_photo_path !==
+      photoPath
+  ) {
+    await supabase.storage
+      .from(
+        MEDIA_BUCKET,
+      )
+      .remove([
+        photoPath,
+      ])
+
+    throw new Error(
+      'A foto foi enviada, mas não foi possível confirmar seu vínculo com o cavalo.',
+    )
+  }
+
+  if (
+    currentPhotoPath &&
+    currentPhotoPath !==
+      photoPath
+  ) {
+    await supabase.storage
+      .from(
+        MEDIA_BUCKET,
+      )
+      .remove([
+        currentPhotoPath,
+      ])
+  }
+
+  const photoUrl =
+    await getHorsePhotoUrl(
+      photoPath,
+    )
+
+  if (!photoUrl) {
+    throw new Error(
+      'A foto foi salva, mas não foi possível gerar sua visualização.',
+    )
+  }
+
+  return {
+    photoPath,
+    photoUrl,
+  }
+}
+
 export async function getHorses(): Promise<
   HorseListItem[]
 > {
@@ -223,7 +473,9 @@ export async function getHorses(): Promise<
     data,
     error,
   } = await supabase
-    .from('horses')
+    .from(
+      'horses',
+    )
     .select(
       horseListSelect,
     )
@@ -259,7 +511,9 @@ export async function getHorseById(
     data,
     error,
   } = await supabase
-    .from('horses')
+    .from(
+      'horses',
+    )
     .select(
       horseSelect,
     )
@@ -288,7 +542,9 @@ export async function getAvailableStalls(): Promise<
     occupiedStallsResult,
   ] = await Promise.all([
     supabase
-      .from('stalls')
+      .from(
+        'stalls',
+      )
       .select(`
         id,
         name,
@@ -310,7 +566,9 @@ export async function getAvailableStalls(): Promise<
       ),
 
     supabase
-      .from('horses')
+      .from(
+        'horses',
+      )
       .select(
         'stall_id',
       )
@@ -385,7 +643,9 @@ export async function createHorse(
     data,
     error,
   } = await supabase
-    .from('horses')
+    .from(
+      'horses',
+    )
     .insert({
       name:
         input.name,
@@ -395,6 +655,9 @@ export async function createHorse(
 
       sex:
         input.sex,
+
+      ownership_type:
+        'client',
 
       client_id:
         input.clientId,
@@ -425,12 +688,8 @@ export async function updateHorse(
   horseId: string,
   input: UpdateHorseInput,
 ): Promise<Horse> {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from('horses')
-    .update({
+  const payload:
+    HorseUpdatePayload = {
       name:
         input.name,
 
@@ -451,7 +710,45 @@ export async function updateHorse(
 
       active:
         input.active,
-    })
+    }
+
+  if (
+    input.birthDate !==
+    undefined
+  ) {
+    payload.birth_date =
+      input.birthDate
+  }
+
+  if (
+    input.ownershipType !==
+    undefined
+  ) {
+    payload.ownership_type =
+      input.ownershipType
+
+    if (
+      input.ownershipType ===
+      'haras'
+    ) {
+      payload.client_id =
+        null
+
+      payload.monthly_fee =
+        null
+    }
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      'horses',
+    )
+    .update(
+      payload,
+    )
     .eq(
       'id',
       horseId,

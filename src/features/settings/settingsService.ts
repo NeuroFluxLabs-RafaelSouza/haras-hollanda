@@ -10,6 +10,7 @@ import {
 type AppSettingsRow = {
   id: number
   haras_name: string
+  logo_path: string | null
   monthly_due_day: number
   financial_alert_days: number
   inventory_replenishment_days: number
@@ -17,9 +18,22 @@ type AppSettingsRow = {
   updated_at: string
 }
 
+const MEDIA_BUCKET =
+  'haras-media'
+
+const MAX_IMAGE_SIZE_BYTES =
+  5 * 1024 * 1024
+
+const SIGNED_URL_DURATION_SECONDS =
+  60 * 60 * 24
+
+export const APP_SETTINGS_UPDATED_EVENT =
+  'haras-settings-updated'
+
 const settingsSelect = `
   id,
   haras_name,
+  logo_path,
   monthly_due_day,
   financial_alert_days,
   inventory_replenishment_days,
@@ -27,12 +41,30 @@ const settingsSelect = `
   updated_at
 `
 
+function notifySettingsUpdated() {
+  if (
+    typeof window ===
+    'undefined'
+  ) {
+    return
+  }
+
+  window.dispatchEvent(
+    new Event(
+      APP_SETTINGS_UPDATED_EVENT,
+    ),
+  )
+}
+
 function mapAppSettings(
   row: AppSettingsRow,
 ): AppSettings {
   return {
     harasName:
       row.haras_name,
+
+    logoPath:
+      row.logo_path,
 
     monthlyDueDay:
       row.monthly_due_day,
@@ -46,6 +78,54 @@ function mapAppSettings(
     updatedAt:
       row.updated_at,
   }
+}
+
+function getImageExtension(
+  file: File,
+) {
+  switch (
+    file.type
+  ) {
+    case 'image/jpeg':
+      return 'jpg'
+
+    case 'image/png':
+      return 'png'
+
+    case 'image/webp':
+      return 'webp'
+
+    default:
+      throw new Error(
+        'Use uma imagem JPG, PNG ou WebP.',
+      )
+  }
+}
+
+function validateImageFile(
+  file: File,
+) {
+  if (
+    file.size <=
+    0
+  ) {
+    throw new Error(
+      'O arquivo selecionado está vazio.',
+    )
+  }
+
+  if (
+    file.size >
+    MAX_IMAGE_SIZE_BYTES
+  ) {
+    throw new Error(
+      'A imagem deve ter no máximo 5 MB.',
+    )
+  }
+
+  getImageExtension(
+    file,
+  )
 }
 
 export async function getAppSettings(): Promise<AppSettings> {
@@ -74,6 +154,145 @@ export async function getAppSettings(): Promise<AppSettings> {
   return mapAppSettings(
     data as AppSettingsRow,
   )
+}
+
+export async function getHarasLogoUrl(
+  logoPath: string | null,
+): Promise<string | null> {
+  if (
+    !logoPath
+  ) {
+    return null
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .storage
+    .from(
+      MEDIA_BUCKET,
+    )
+    .createSignedUrl(
+      logoPath,
+      SIGNED_URL_DURATION_SECONDS,
+    )
+
+  if (
+    error ||
+    !data?.signedUrl
+  ) {
+    return null
+  }
+
+  return data.signedUrl
+}
+
+export async function uploadHarasLogo(
+  file: File,
+): Promise<AppSettings> {
+  validateImageFile(
+    file,
+  )
+
+  const currentSettings =
+    await getAppSettings()
+
+  const extension =
+    getImageExtension(
+      file,
+    )
+
+  const logoPath =
+    `branding/logo-${Date.now()}.${extension}`
+
+  const {
+    error: uploadError,
+  } =
+    await supabase
+      .storage
+      .from(
+        MEDIA_BUCKET,
+      )
+      .upload(
+        logoPath,
+        file,
+        {
+          cacheControl:
+            '3600',
+
+          upsert:
+            false,
+        },
+      )
+
+  if (uploadError) {
+    throw new Error(
+      `Erro ao enviar logo: ${uploadError.message}`,
+    )
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      'app_settings',
+    )
+    .update({
+      logo_path:
+        logoPath,
+
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq(
+      'id',
+      1,
+    )
+    .select(
+      settingsSelect,
+    )
+    .single()
+
+  if (error) {
+    await supabase
+      .storage
+      .from(
+        MEDIA_BUCKET,
+      )
+      .remove([
+        logoPath,
+      ])
+
+    throw new Error(
+      `Erro ao salvar logo: ${error.message}`,
+    )
+  }
+
+  if (
+    currentSettings.logoPath &&
+    currentSettings.logoPath !==
+      logoPath
+  ) {
+    await supabase
+      .storage
+      .from(
+        MEDIA_BUCKET,
+      )
+      .remove([
+        currentSettings.logoPath,
+      ])
+  }
+
+  const settings =
+    mapAppSettings(
+      data as AppSettingsRow,
+    )
+
+  notifySettingsUpdated()
+
+  return settings
 }
 
 export async function updateAppSettings(
@@ -162,7 +381,12 @@ export async function updateAppSettings(
     )
   }
 
-  return mapAppSettings(
-    data as AppSettingsRow,
-  )
+  const settings =
+    mapAppSettings(
+      data as AppSettingsRow,
+    )
+
+  notifySettingsUpdated()
+
+  return settings
 }

@@ -13,6 +13,8 @@ export type FinancialTransactionSource =
   | 'manual'
   | 'adjustment'
   | 'appointment'
+  | 'horse_purchase'
+  | 'horse_sale'
 
 export type FinancialCharge = {
   id: string
@@ -116,4 +118,10 @@ export const FINANCIAL_TRANSACTION_SOURCE_LABELS:
 
     appointment:
       'Serviço da agenda',
+
+    horse_purchase:
+      'Compra de cavalo',
+
+    horse_sale:
+      'Venda de cavalo',
   }
