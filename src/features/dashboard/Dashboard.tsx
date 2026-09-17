@@ -69,6 +69,7 @@ const emptyFinancialAttention: DashboardFinancialAttention = {
   dueTodayAmount: 0,
   overdueAmount: 0,
   pendingAppointmentExpenseAmount: 0,
+  alertDays: 3,
 }
 
 function getTodayDateKey() {
@@ -150,6 +151,19 @@ function formatCurrency(
   ).format(
     value,
   )
+}
+
+function getUpcomingPeriodLabel(
+  alertDays: number,
+) {
+  if (
+    alertDays ===
+    1
+  ) {
+    return 'no próximo dia'
+  }
+
+  return `nos próximos ${alertDays} dias`
 }
 
 function getInventoryAlertLevel(
@@ -449,6 +463,11 @@ export function Dashboard() {
       0 ||
     financialError !==
       null
+
+  const upcomingPeriodLabel =
+    getUpcomingPeriodLabel(
+      financialAttention.alertDays,
+    )
 
   return (
     <section className="dashboard">
@@ -851,10 +870,10 @@ export function Dashboard() {
                     <span>
                       {financialAttention.upcomingCharges.length ===
                       1
-                        ? `1 mensalidade vence nos próximos 3 dias, no valor de ${formatCurrency(
+                        ? `1 mensalidade vence ${upcomingPeriodLabel}, no valor de ${formatCurrency(
                             financialAttention.upcomingAmount,
                           )}.`
-                        : `${financialAttention.upcomingCharges.length} mensalidades vencem nos próximos 3 dias, somando ${formatCurrency(
+                        : `${financialAttention.upcomingCharges.length} mensalidades vencem ${upcomingPeriodLabel}, somando ${formatCurrency(
                             financialAttention.upcomingAmount,
                           )}.`}
                     </span>

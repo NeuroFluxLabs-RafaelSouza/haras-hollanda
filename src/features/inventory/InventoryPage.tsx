@@ -26,7 +26,6 @@ import {
 } from '../../domain/inventory.ts'
 
 import {
-  INVENTORY_REPLENISHMENT_DAYS,
   getInventorySummary,
   type InventoryOperationalSummary,
 } from './inventoryService.ts'
@@ -52,7 +51,8 @@ function formatQuantity(
   return new Intl.NumberFormat(
     'pt-BR',
     {
-      maximumFractionDigits: 3,
+      maximumFractionDigits:
+        3,
     },
   ).format(value)
 }
@@ -63,7 +63,8 @@ function formatAutonomy(
   return new Intl.NumberFormat(
     'pt-BR',
     {
-      maximumFractionDigits: 1,
+      maximumFractionDigits:
+        1,
     },
   ).format(value)
 }
@@ -72,19 +73,33 @@ const PLURAL_UNIT_LABELS: Record<
   InventoryUnit,
   string
 > = {
-  kg: 'Kg',
-  bag: 'Sacos',
-  bale: 'Fardos',
-  liter: 'Litros',
-  unit: 'Unidades',
-  box: 'Caixas',
+  kg:
+    'Kg',
+
+  bag:
+    'Sacos',
+
+  bale:
+    'Fardos',
+
+  liter:
+    'Litros',
+
+  unit:
+    'Unidades',
+
+  box:
+    'Caixas',
 }
 
 function getUnitLabel(
   unit: InventoryUnit,
   quantity: number,
 ) {
-  if (quantity === 1) {
+  if (
+    quantity ===
+    1
+  ) {
     return INVENTORY_UNIT_LABELS[
       unit
     ]
@@ -99,21 +114,28 @@ function getInventoryStatus(
   summary: InventoryOperationalSummary,
 ) {
   if (
-    summary.currentStock <= 0
+    summary.currentStock <=
+    0
   ) {
     return {
-      label: 'Sem estoque',
+      label:
+        'Sem estoque',
+
       className:
         'inventory-card__status--critical',
     }
   }
 
   if (
-    summary.autonomyDays !== null &&
-    summary.autonomyDays <= 3
+    summary.autonomyDays !==
+      null &&
+    summary.autonomyDays <=
+      3
   ) {
     return {
-      label: 'Crítico',
+      label:
+        'Crítico',
+
       className:
         'inventory-card__status--critical',
     }
@@ -123,14 +145,18 @@ function getInventoryStatus(
     summary.needsReplenishment
   ) {
     return {
-      label: 'Repor em breve',
+      label:
+        'Repor em breve',
+
       className:
         'inventory-card__status--warning',
     }
   }
 
   return {
-    label: 'Normal',
+    label:
+      'Normal',
+
     className:
       'inventory-card__status--ok',
   }
@@ -157,23 +183,30 @@ export function InventoryPage() {
   const [
     error,
     setError,
-  ] = useState<string | null>(
-    null,
-  )
+  ] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted =
+      true
 
     async function loadInventory() {
       try {
         const data =
           await getInventorySummary()
 
-        if (isMounted) {
-          setItems(data)
+        if (
+          isMounted
+        ) {
+          setItems(
+            data,
+          )
         }
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -182,10 +215,16 @@ export function InventoryPage() {
             ? error.message
             : 'Não foi possível carregar o estoque.'
 
-        setError(message)
+        setError(
+          message,
+        )
       } finally {
-        if (isMounted) {
-          setLoading(false)
+        if (
+          isMounted
+        ) {
+          setLoading(
+            false,
+          )
         }
       }
     }
@@ -193,7 +232,8 @@ export function InventoryPage() {
     loadInventory()
 
     return () => {
-      isMounted = false
+      isMounted =
+        false
     }
   }, [])
 
@@ -201,10 +241,14 @@ export function InventoryPage() {
     useMemo(
       () =>
         items.filter(
-          ({ item }) =>
+          ({
+            item,
+          }) =>
             item.active,
         ),
-      [items],
+      [
+        items,
+      ],
     )
 
   const replenishmentItems =
@@ -214,20 +258,28 @@ export function InventoryPage() {
           (summary) =>
             summary.needsReplenishment,
         ),
-      [activeItems],
+      [
+        activeItems,
+      ],
     )
 
   const filteredItems =
     useMemo(() => {
       const normalizedSearch =
-        normalizeText(search)
+        normalizeText(
+          search,
+        )
 
-      if (!normalizedSearch) {
+      if (
+        !normalizedSearch
+      ) {
         return activeItems
       }
 
       return activeItems.filter(
-        ({ item }) => {
+        ({
+          item,
+        }) => {
           const category =
             INVENTORY_CATEGORY_LABELS[
               item.category
@@ -274,7 +326,10 @@ export function InventoryPage() {
             className="inventory-page-header__secondary"
             to="/estoque/produtos"
           >
-            <PackageSearch size={17} />
+            <PackageSearch
+              size={17}
+            />
+
             Produtos
           </Link>
 
@@ -282,7 +337,10 @@ export function InventoryPage() {
             className="inventory-page-header__primary"
             to="/estoque/compra"
           >
-            <ArrowDown size={17} />
+            <ArrowDown
+              size={17}
+            />
+
             Registrar compra
           </Link>
         </div>
@@ -293,7 +351,9 @@ export function InventoryPage() {
           <div className="inventory-metric__icon">
             <Boxes
               size={19}
-              strokeWidth={1.8}
+              strokeWidth={
+                1.8
+              }
             />
           </div>
 
@@ -314,7 +374,9 @@ export function InventoryPage() {
           <div className="inventory-metric__icon inventory-metric__icon--warning">
             <AlertTriangle
               size={19}
-              strokeWidth={1.8}
+              strokeWidth={
+                1.8
+              }
             />
           </div>
 
@@ -336,13 +398,17 @@ export function InventoryPage() {
         <div className="inventory-search">
           <Search
             size={16}
-            strokeWidth={1.8}
+            strokeWidth={
+              1.8
+            }
           />
 
           <input
             type="search"
             value={search}
-            onChange={(event) =>
+            onChange={(
+              event,
+            ) =>
               setSearch(
                 event.target.value,
               )
@@ -367,11 +433,14 @@ export function InventoryPage() {
 
       {!loading &&
         !error &&
-        activeItems.length === 0 && (
+        activeItems.length ===
+          0 && (
           <div className="inventory-empty">
             <Archive
               size={26}
-              strokeWidth={1.6}
+              strokeWidth={
+                1.6
+              }
             />
 
             <strong>
@@ -392,8 +461,10 @@ export function InventoryPage() {
 
       {!loading &&
         !error &&
-        activeItems.length > 0 &&
-        filteredItems.length === 0 && (
+        activeItems.length >
+          0 &&
+        filteredItems.length ===
+          0 && (
           <div className="inventory-state">
             Nenhum produto encontrado para “{search}”.
           </div>
@@ -401,17 +472,22 @@ export function InventoryPage() {
 
       {!loading &&
         !error &&
-        filteredItems.length > 0 && (
+        filteredItems.length >
+          0 && (
           <div className="inventory-grid">
             {filteredItems.map(
-              (summary) => {
+              (
+                summary,
+              ) => {
                 const {
                   item,
                   currentStock,
                   dailyConsumption,
                   autonomyDays,
                   needsReplenishment,
-                } = summary
+                  replenishmentDays,
+                } =
+                  summary
 
                 const status =
                   getInventoryStatus(
@@ -419,8 +495,10 @@ export function InventoryPage() {
                   )
 
                 const hasConsumptionForecast =
-                  dailyConsumption > 0 &&
-                  autonomyDays !== null
+                  dailyConsumption >
+                    0 &&
+                  autonomyDays !==
+                    null
 
                 return (
                   <article
@@ -429,7 +507,9 @@ export function InventoryPage() {
                         ? 'inventory-card--warning'
                         : ''
                     }`}
-                    key={item.id}
+                    key={
+                      item.id
+                    }
                   >
                     <div className="inventory-card__header">
                       <div>
@@ -442,14 +522,18 @@ export function InventoryPage() {
                         </span>
 
                         <h2>
-                          {item.name}
+                          {
+                            item.name
+                          }
                         </h2>
                       </div>
 
                       <span
                         className={`inventory-card__status ${status.className}`}
                       >
-                        {status.label}
+                        {
+                          status.label
+                        }
                       </span>
                     </div>
 
@@ -491,14 +575,18 @@ export function InventoryPage() {
                       <div
                         className={`inventory-card__forecast ${
                           autonomyDays <=
-                          INVENTORY_REPLENISHMENT_DAYS
+                          replenishmentDays
                             ? 'inventory-card__forecast--warning'
                             : ''
                         }`}
                       >
                         <Gauge
-                          size={16}
-                          strokeWidth={1.8}
+                          size={
+                            16
+                          }
+                          strokeWidth={
+                            1.8
+                          }
                         />
 
                         <div>
@@ -531,8 +619,12 @@ export function InventoryPage() {
                       item.packageSize && (
                         <div className="inventory-card__package">
                           <Boxes
-                            size={15}
-                            strokeWidth={1.8}
+                            size={
+                              15
+                            }
+                            strokeWidth={
+                              1.8
+                            }
                           />
 
                           <span>
@@ -563,14 +655,18 @@ export function InventoryPage() {
                     {needsReplenishment && (
                       <div className="inventory-card__alert">
                         <AlertTriangle
-                          size={15}
-                          strokeWidth={1.8}
+                          size={
+                            15
+                          }
+                          strokeWidth={
+                            1.8
+                          }
                         />
 
                         <span>
                           {hasConsumptionForecast &&
                           autonomyDays <=
-                            INVENTORY_REPLENISHMENT_DAYS
+                            replenishmentDays
                             ? `Planeje a reposição. O estoque atual cobre aproximadamente ${formatAutonomy(
                                 autonomyDays,
                               )} dias.`
@@ -584,7 +680,12 @@ export function InventoryPage() {
                         className="inventory-card__movement inventory-card__movement--entry"
                         to={`/estoque/compra?product=${item.id}`}
                       >
-                        <ArrowDown size={15} />
+                        <ArrowDown
+                          size={
+                            15
+                          }
+                        />
+
                         Registrar compra
                       </Link>
 
@@ -592,7 +693,12 @@ export function InventoryPage() {
                         className="inventory-card__movement inventory-card__movement--exit"
                         to={`/estoque/${item.id}/movimentar?type=exit`}
                       >
-                        <ArrowUp size={15} />
+                        <ArrowUp
+                          size={
+                            15
+                          }
+                        />
+
                         Saída manual
                       </Link>
                     </div>

@@ -11,6 +11,10 @@ import {
   supabase,
 } from '../../lib/supabase.ts'
 
+import {
+  getAppSettings,
+} from '../settings/settingsService.ts'
+
 type Relation<T> =
   | T
   | T[]
@@ -130,6 +134,7 @@ export type DashboardFinancialAttention = {
   dueTodayAmount: number
   overdueAmount: number
   pendingAppointmentExpenseAmount: number
+  alertDays: number
 }
 
 const financialChargeSelect = `
@@ -861,13 +866,19 @@ export async function getDashboardFinancialAttention(): Promise<DashboardFinanci
   const [
     charges,
     pendingAppointmentExpenses,
+    settings,
   ] = await Promise.all([
     getFinancialChargesByMonth(
       currentCompetence,
     ),
 
     getAllPendingAppointmentExpenses(),
+
+    getAppSettings(),
   ])
+
+  const alertDays =
+    settings.financialAlertDays
 
   const pendingCharges =
     charges.filter(
@@ -897,7 +908,7 @@ export async function getDashboardFinancialAttention(): Promise<DashboardFinanci
           daysUntilDue >=
             1 &&
           daysUntilDue <=
-            3
+            alertDays
         )
       },
     )
@@ -993,6 +1004,7 @@ export async function getDashboardFinancialAttention(): Promise<DashboardFinanci
     dueTodayAmount,
     overdueAmount,
     pendingAppointmentExpenseAmount,
+    alertDays,
   }
 }
 

@@ -17,14 +17,16 @@ import {
   supabase,
 } from '../../lib/supabase.ts'
 
-export const INVENTORY_REPLENISHMENT_DAYS =
-  7
+import {
+  getAppSettings,
+} from '../settings/settingsService.ts'
 
 export type InventoryOperationalSummary =
   InventoryItemSummary & {
     dailyConsumption: number
     autonomyDays: number | null
     needsReplenishment: boolean
+    replenishmentDays: number
   }
 
 type InventoryItemRow = {
@@ -789,11 +791,16 @@ export async function getInventorySummary(): Promise<
     items,
     movements,
     consumptionByItem,
+    settings,
   ] = await Promise.all([
     getInventoryItems(),
     getInventoryMovements(),
     getDailyFeedingConsumptionByItem(),
+    getAppSettings(),
   ])
+
+  const replenishmentDays =
+    settings.inventoryReplenishmentDays
 
   const movementsByItem =
     new Map<
@@ -862,7 +869,7 @@ export async function getInventorySummary(): Promise<
           autonomyDays !==
             null &&
           autonomyDays <=
-            INVENTORY_REPLENISHMENT_DAYS
+            replenishmentDays
         )
 
       return {
@@ -877,6 +884,8 @@ export async function getInventorySummary(): Promise<
         autonomyDays,
 
         needsReplenishment,
+
+        replenishmentDays,
       }
     },
   )
