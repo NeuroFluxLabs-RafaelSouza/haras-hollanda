@@ -8,35 +8,40 @@ import {
 import {
   ArrowLeft,
   CircleDollarSign,
-  ShoppingCart,
   UserRound,
 } from 'lucide-react'
 
 import {
   Link,
   useNavigate,
+  useSearchParams,
 } from 'react-router-dom'
+
+import {
+  MoneyInput,
+} from '../../components/ui/MoneyInput.tsx'
 
 import {
   SearchableSelect,
   type SearchableSelectOption,
 } from '../../components/ui/SearchableSelect.tsx'
 
-import {
-  MoneyInput,
-} from '../../components/ui/MoneyInput.tsx'
-
 import type {
   Client,
 } from '../../domain/client.ts'
 
 import type {
+  HorseOwnershipType,
   HorseSex,
 } from '../../domain/horse.ts'
 
 import {
   HORSE_BREEDS,
 } from '../../domain/horseBreeds.ts'
+
+import {
+  getHorseLifeStageLabel,
+} from '../../domain/horseLifeStage.ts'
 
 import type {
   Stall,
@@ -47,15 +52,19 @@ import {
 } from '../clients/clientsService.ts'
 
 import {
-  createHorseWithOptionalPurchase,
-  type HorseOwnershipType,
-} from './horseTradesService.ts'
+  createHorseLineage,
+} from './horseLineagesService.ts'
 
 import {
+  createHorse,
   getAvailableStalls,
 } from './horsesService.ts'
 
 import './NewHorsesPage.css'
+
+type CommercialMode =
+  | 'purchase'
+  | 'sale'
 
 const breedOptions: SearchableSelectOption[] =
   HORSE_BREEDS.map(
@@ -94,20 +103,47 @@ function getCurrentDateInputValue() {
   return `${year}-${month}-${day}`
 }
 
-function dateInputToIso(
-  value: string,
-) {
-  return new Date(
-    `${value}T12:00:00`,
-  ).toISOString()
-}
-
 export function NewHorsesPage() {
   const navigate =
     useNavigate()
 
+  const [
+    searchParams,
+  ] = useSearchParams()
+
   const today =
     getCurrentDateInputValue()
+
+  const returnTo =
+    searchParams.get(
+      'returnTo',
+    )
+
+  const commercialMode:
+    CommercialMode =
+    searchParams.get(
+      'mode',
+    ) ===
+    'sale'
+      ? 'sale'
+      : 'purchase'
+
+  const cameFromCommercial =
+    returnTo ===
+    'comercial'
+
+  const lineageRequired =
+    cameFromCommercial &&
+    commercialMode ===
+      'purchase'
+
+  const initialOwnershipType:
+    HorseOwnershipType =
+    cameFromCommercial &&
+    commercialMode ===
+      'sale'
+      ? 'haras'
+      : 'client'
 
   const [
     clients,
@@ -147,11 +183,21 @@ export function NewHorsesPage() {
   ] = useState('')
 
   const [
+    fatherName,
+    setFatherName,
+  ] = useState('')
+
+  const [
+    motherName,
+    setMotherName,
+  ] = useState('')
+
+  const [
     ownershipType,
     setOwnershipType,
   ] =
     useState<HorseOwnershipType>(
-      'client',
+      initialOwnershipType,
     )
 
   const [
@@ -168,33 +214,6 @@ export function NewHorsesPage() {
     monthlyFee,
     setMonthlyFee,
   ] = useState(0)
-
-  const [
-    registerPurchase,
-    setRegisterPurchase,
-  ] = useState(false)
-
-  const [
-    purchaseAmount,
-    setPurchaseAmount,
-  ] = useState(0)
-
-  const [
-    purchaseDate,
-    setPurchaseDate,
-  ] = useState(
-    today,
-  )
-
-  const [
-    sellerName,
-    setSellerName,
-  ] = useState('')
-
-  const [
-    purchasePaid,
-    setPurchasePaid,
-  ] = useState(true)
 
   const [
     loadingOptions,
@@ -232,14 +251,11 @@ export function NewHorsesPage() {
           return
         }
 
-        const activeClients =
+        setClients(
           clientsData.filter(
             (client) =>
               client.active,
-          )
-
-        setClients(
-          activeClients,
+          ),
         )
 
         setAvailableStalls(
@@ -267,7 +283,7 @@ export function NewHorsesPage() {
       }
     }
 
-    loadFormOptions()
+    void loadFormOptions()
 
     return () => {
       isMounted =
@@ -286,6 +302,20 @@ export function NewHorsesPage() {
         ),
       [
         breed,
+      ],
+    )
+
+  const lifeStageLabel =
+    useMemo(
+      () =>
+        getHorseLifeStageLabel(
+          sex,
+          birthDate ||
+            null,
+        ),
+      [
+        birthDate,
+        sex,
       ],
     )
 
@@ -311,25 +341,7 @@ export function NewHorsesPage() {
       setMonthlyFee(
         0,
       )
-
-      return
     }
-
-    setRegisterPurchase(
-      false,
-    )
-
-    setPurchaseAmount(
-      0,
-    )
-
-    setSellerName(
-      '',
-    )
-
-    setPurchasePaid(
-      true,
-    )
   }
 
   async function handleSubmit(
@@ -343,6 +355,12 @@ export function NewHorsesPage() {
 
     const trimmedName =
       name.trim()
+
+    const trimmedFatherName =
+      fatherName.trim()
+
+    const trimmedMotherName =
+      motherName.trim()
 
     if (!trimmedName) {
       setError(
@@ -383,24 +401,50 @@ export function NewHorsesPage() {
     }
 
     if (
-      ownershipType ===
-        'client' &&
-      !clientId
+      lineageRequired &&
+      (
+        !trimmedFatherName ||
+        !trimmedMotherName
+      )
     ) {
       setError(
-        'Selecione o cliente responsável.',
+        'Para uma compra, informe o pai e a mãe do cavalo.',
       )
 
       return
     }
 
-    const parsedMonthlyFee =
+    const hasOnlyOneParent =
+      (
+        trimmedFatherName &&
+        !trimmedMotherName
+      ) ||
+      (
+        !trimmedFatherName &&
+        trimmedMotherName
+      )
+
+    if (
+      hasOnlyOneParent
+    ) {
+      setError(
+        'Informe Pai e Mãe juntos ou deixe os dois campos em branco.',
+      )
+
+      return
+    }
+
+    if (
       ownershipType ===
         'client' &&
-      monthlyFee >
-        0
-        ? monthlyFee
-        : null
+      !clientId
+    ) {
+      setError(
+        'Selecione o proprietário do cavalo.',
+      )
+
+      return
+    }
 
     if (
       ownershipType ===
@@ -420,142 +464,85 @@ export function NewHorsesPage() {
       return
     }
 
-    let parsedPurchaseAmount:
-      | number
-      | null =
-      null
-
-    let purchaseAt:
-      | string
-      | null =
-      null
-
-    if (
-      ownershipType ===
-        'haras' &&
-      registerPurchase
-    ) {
-      parsedPurchaseAmount =
-        purchaseAmount
-
-      if (
-        !Number.isFinite(
-          parsedPurchaseAmount,
-        ) ||
-        parsedPurchaseAmount <=
-          0
-      ) {
-        setError(
-          'Informe o valor da compra.',
-        )
-
-        return
-      }
-
-      if (!purchaseDate) {
-        setError(
-          'Informe a data da compra.',
-        )
-
-        return
-      }
-
-      if (
-        purchaseDate >
-        today
-      ) {
-        setError(
-          'A data da compra não pode estar no futuro.',
-        )
-
-        return
-      }
-
-      if (
-        !sellerName.trim()
-      ) {
-        setError(
-          'Informe de quem o cavalo foi comprado.',
-        )
-
-        return
-      }
-
-      purchaseAt =
-        dateInputToIso(
-          purchaseDate,
-        )
-    }
-
     setSaving(
       true,
     )
 
     try {
-      await createHorseWithOptionalPurchase(
-        {
-          name:
-            trimmedName,
+      let lineageId:
+        | string
+        | null =
+        null
 
-          breed,
+      if (
+        trimmedFatherName &&
+        trimmedMotherName
+      ) {
+        const lineage =
+          await createHorseLineage(
+            {
+              fatherName:
+                trimmedFatherName,
 
-          sex,
+              motherName:
+                trimmedMotherName,
+            },
+          )
 
-          birthDate:
-            birthDate ||
-            null,
+        lineageId =
+          lineage.id
+      }
 
-          ownershipType,
+      const createdHorse =
+        await createHorse(
+          {
+            name:
+              trimmedName,
 
-          clientId:
-            ownershipType ===
-            'client'
-              ? clientId
-              : null,
+            breed,
 
-          stallId:
-            stallId ||
-            null,
+            sex,
 
-          monthlyFee:
-            ownershipType ===
-            'client'
-              ? parsedMonthlyFee
-              : null,
+            birthDate:
+              birthDate ||
+              null,
 
-          registerPurchase:
-            ownershipType ===
-              'haras' &&
-            registerPurchase,
+            lineageId,
 
-          purchaseAmount:
-            parsedPurchaseAmount,
+            lineageText:
+              null,
 
-          purchaseAt,
+            ownershipType,
 
-          sellerName:
-            ownershipType ===
-                'haras' &&
-              registerPurchase
-              ? sellerName.trim()
-              : null,
+            clientId:
+              ownershipType ===
+              'client'
+                ? clientId
+                : null,
 
-          purchasePaid:
-            ownershipType ===
-              'haras' &&
-            registerPurchase
-              ? purchasePaid
-              : false,
+            stallId:
+              stallId ||
+              null,
 
-          purchasePaidAt:
-            ownershipType ===
-                'haras' &&
-              registerPurchase &&
-              purchasePaid
-              ? purchaseAt
-              : null,
-        },
-      )
+            monthlyFee:
+              ownershipType ===
+                'client' &&
+              monthlyFee >
+                0
+                ? monthlyFee
+                : null,
+          },
+        )
+
+      if (
+        cameFromCommercial
+      ) {
+        navigate(
+          `/cavalos?area=comercial&mode=${commercialMode}&horse=${createdHorse.id}`,
+        )
+
+        return
+      }
 
       navigate(
         '/cavalos',
@@ -576,18 +563,27 @@ export function NewHorsesPage() {
     }
   }
 
+  const cancelUrl =
+    cameFromCommercial
+      ? `/cavalos?area=comercial&mode=${commercialMode}`
+      : '/cavalos'
+
   return (
     <section className="new-horse-page">
       <header className="new-horse-header">
         <Link
           className="new-horse-header__back"
-          to="/cavalos"
+          to={
+            cancelUrl
+          }
         >
           <ArrowLeft
             size={17}
           />
 
-          Cavalos
+          {cameFromCommercial
+            ? 'Comercial'
+            : 'Cavalos'}
         </Link>
 
         <div>
@@ -600,11 +596,20 @@ export function NewHorsesPage() {
           </h1>
 
           <p className="page-header__description">
-            Cadastre o animal uma vez. O sistema cuida do vínculo,
-            hospedagem e compra quando necessário.
+            Cadastre somente as informações necessárias para identificar e
+            organizar o animal.
           </p>
         </div>
       </header>
+
+      {cameFromCommercial && (
+        <div className="new-horse-form__state">
+          {commercialMode ===
+          'purchase'
+            ? 'Após o cadastro, o sistema volta para a compra com este cavalo já selecionado.'
+            : 'Após o cadastro, o sistema volta para a venda com este cavalo já selecionado.'}
+        </div>
+      )}
 
       <form
         className="new-horse-form"
@@ -679,10 +684,6 @@ export function NewHorsesPage() {
                   setBreed
                 }
               />
-
-              <span className="new-horse-field__help">
-                Digite parte do nome para pesquisar no catálogo.
-              </span>
             </div>
 
             <div className="new-horse-field">
@@ -740,8 +741,75 @@ export function NewHorsesPage() {
               />
 
               <span className="new-horse-field__help">
-                Se souber a data, o sistema poderá calcular a idade
-                automaticamente.
+                {birthDate
+                  ? `Categoria calculada pelo sistema: ${lifeStageLabel}.`
+                  : 'O sistema calcula Potro, Potra, Cavalo ou Égua pela data.'}
+              </span>
+            </div>
+
+            <div className="new-horse-field">
+              <label htmlFor="fatherName">
+                Pai
+              </label>
+
+              <input
+                id="fatherName"
+                name="fatherName"
+                type="text"
+                value={
+                  fatherName
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setFatherName(
+                    event.target.value,
+                  )
+                }
+                placeholder="Nome do pai"
+                autoComplete="off"
+                required={
+                  lineageRequired
+                }
+              />
+
+              <span className="new-horse-field__help">
+                {lineageRequired
+                  ? 'Obrigatório porque este cadastro faz parte de uma compra.'
+                  : 'Opcional no cadastro comum.'}
+              </span>
+            </div>
+
+            <div className="new-horse-field">
+              <label htmlFor="motherName">
+                Mãe
+              </label>
+
+              <input
+                id="motherName"
+                name="motherName"
+                type="text"
+                value={
+                  motherName
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setMotherName(
+                    event.target.value,
+                  )
+                }
+                placeholder="Nome da mãe"
+                autoComplete="off"
+                required={
+                  lineageRequired
+                }
+              />
+
+              <span className="new-horse-field__help">
+                {lineageRequired
+                  ? 'Pai e Mãe formarão a linhagem do animal.'
+                  : 'Se informar a linhagem, informe Pai e Mãe.'}
               </span>
             </div>
           </div>
@@ -760,11 +828,11 @@ export function NewHorsesPage() {
 
             <div>
               <h2>
-                Vínculo e hospedagem
+                Proprietário e hospedagem
               </h2>
 
               <p>
-                Informe apenas a situação atual do cavalo.
+                Informe a situação atual do animal no Haras.
               </p>
             </div>
           </div>
@@ -777,7 +845,7 @@ export function NewHorsesPage() {
             <div className="new-horse-form__grid">
               <div className="new-horse-field">
                 <label htmlFor="ownershipType">
-                  O cavalo é
+                  Proprietário
                 </label>
 
                 <select
@@ -796,24 +864,20 @@ export function NewHorsesPage() {
                   }
                 >
                   <option value="client">
-                    De cliente
+                    Cliente cadastrado
                   </option>
 
                   <option value="haras">
-                    Do Haras
+                    Haras Hollanda
                   </option>
                 </select>
-
-                <span className="new-horse-field__help">
-                  Isso define automaticamente responsável e mensalidade.
-                </span>
               </div>
 
               {ownershipType ===
                 'client' && (
                 <div className="new-horse-field">
                   <label htmlFor="client">
-                    Cliente responsável
+                    Cliente
                   </label>
 
                   <select
@@ -854,14 +918,6 @@ export function NewHorsesPage() {
                       ),
                     )}
                   </select>
-
-                  {clients.length ===
-                    0 && (
-                    <span className="new-horse-field__help">
-                      Nenhum cliente ativo está disponível para
-                      vinculação.
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -907,11 +963,6 @@ export function NewHorsesPage() {
                     ),
                   )}
                 </select>
-
-                <span className="new-horse-field__help">
-                  Apenas baias operacionais e livres aparecem nesta
-                  lista.
-                </span>
               </div>
 
               {ownershipType ===
@@ -930,199 +981,11 @@ export function NewHorsesPage() {
                       setMonthlyFee
                     }
                   />
-
-                  <span className="new-horse-field__help">
-                    Digite como em um PIX. Valor mensal relacionado a este
-                    cavalo.
-                  </span>
                 </div>
               )}
             </div>
           )}
         </div>
-
-        {ownershipType ===
-          'haras' && (
-          <div className="new-horse-form__section">
-            <div className="new-horse-form__section-header">
-              <div className="new-horse-form__section-icon">
-                <ShoppingCart
-                  size={18}
-                  strokeWidth={
-                    1.8
-                  }
-                />
-              </div>
-
-              <div>
-                <h2>
-                  Aquisição
-                </h2>
-
-                <p>
-                  Se o cavalo acabou de ser comprado, o Financeiro é
-                  atualizado automaticamente.
-                </p>
-              </div>
-            </div>
-
-            <div className="new-horse-form__grid">
-              <div className="new-horse-field">
-                <label htmlFor="registerPurchase">
-                  Registrar compra agora?
-                </label>
-
-                <select
-                  id="registerPurchase"
-                  name="registerPurchase"
-                  value={
-                    registerPurchase
-                      ? 'yes'
-                      : 'no'
-                  }
-                  onChange={(
-                    event,
-                  ) =>
-                    setRegisterPurchase(
-                      event.target.value ===
-                        'yes',
-                    )
-                  }
-                >
-                  <option value="no">
-                    Não
-                  </option>
-
-                  <option value="yes">
-                    Sim
-                  </option>
-                </select>
-
-                <span className="new-horse-field__help">
-                  Escolha Não se o animal já pertencia ao Haras antes
-                  do sistema.
-                </span>
-              </div>
-
-              {registerPurchase && (
-                <>
-                  <div className="new-horse-field">
-                    <label htmlFor="purchaseAmount">
-                      Valor da compra
-                    </label>
-
-                    <MoneyInput
-                      id="purchaseAmount"
-                      value={
-                        purchaseAmount
-                      }
-                      onChange={
-                        setPurchaseAmount
-                      }
-                    />
-
-                    <span className="new-horse-field__help">
-                      Digite como em um PIX.
-                    </span>
-                  </div>
-
-                  <div className="new-horse-field">
-                    <label htmlFor="purchaseDate">
-                      Data da compra
-                    </label>
-
-                    <input
-                      id="purchaseDate"
-                      name="purchaseDate"
-                      type="date"
-                      max={
-                        today
-                      }
-                      value={
-                        purchaseDate
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        setPurchaseDate(
-                          event.target.value,
-                        )
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="new-horse-field">
-                    <label htmlFor="sellerName">
-                      Vendedor
-                    </label>
-
-                    <input
-                      id="sellerName"
-                      name="sellerName"
-                      type="text"
-                      value={
-                        sellerName
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        setSellerName(
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Nome da pessoa ou empresa"
-                      autoComplete="off"
-                      required
-                    />
-
-                    <span className="new-horse-field__help">
-                      Basta informar o nome. Não precisa cadastrar o
-                      vendedor como cliente.
-                    </span>
-                  </div>
-
-                  <div className="new-horse-field">
-                    <label htmlFor="purchasePaymentStatus">
-                      Situação do pagamento
-                    </label>
-
-                    <select
-                      id="purchasePaymentStatus"
-                      name="purchasePaymentStatus"
-                      value={
-                        purchasePaid
-                          ? 'paid'
-                          : 'pending'
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        setPurchasePaid(
-                          event.target.value ===
-                            'paid',
-                        )
-                      }
-                    >
-                      <option value="paid">
-                        Já foi pago
-                      </option>
-
-                      <option value="pending">
-                        Ainda não foi pago
-                      </option>
-                    </select>
-
-                    <span className="new-horse-field__help">
-                      Só entra no caixa do Financeiro quando o
-                      pagamento estiver confirmado.
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
 
         {error && (
           <div className="new-horse-form__error">
@@ -1133,7 +996,9 @@ export function NewHorsesPage() {
         <div className="new-horse-form__actions">
           <Link
             className="new-horse-cancel"
-            to="/cavalos"
+            to={
+              cancelUrl
+            }
           >
             Cancelar
           </Link>
@@ -1154,7 +1019,9 @@ export function NewHorsesPage() {
           >
             {saving
               ? 'Cadastrando...'
-              : 'Cadastrar cavalo'}
+              : cameFromCommercial
+                ? 'Cadastrar e continuar'
+                : 'Cadastrar cavalo'}
           </button>
         </div>
       </form>

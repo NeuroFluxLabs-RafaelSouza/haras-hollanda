@@ -3,10 +3,10 @@ import {
   useMemo,
   useState,
   type ChangeEvent,
-  type SubmitEvent,
 } from 'react'
 
 import {
+  ArrowLeftRight,
   CalendarDays,
   Camera,
   CircleDollarSign,
@@ -14,15 +14,13 @@ import {
   ImageIcon,
   Plus,
   Search,
-  ShoppingCart,
-  Tag,
   UserRound,
   Utensils,
-  X,
 } from 'lucide-react'
 
 import {
   Link,
+  useSearchParams,
 } from 'react-router-dom'
 
 import {
@@ -30,24 +28,12 @@ import {
 } from '../../components/ui/ImageCropper.tsx'
 
 import {
-  MoneyInput,
-} from '../../components/ui/MoneyInput.tsx'
-
-import type {
-  Client,
-} from '../../domain/client.ts'
-
-import type {
-  HorseOwnershipType,
-} from '../../domain/horse.ts'
+  getHorseLifeStageLabel,
+} from '../../domain/horseLifeStage.ts'
 
 import {
-  getClients,
-} from '../clients/clientsService.ts'
-
-import {
-  registerHorseTrade,
-} from './horseTradesService.ts'
+  HorseCommercialPage,
+} from './HorseCommercialPage.tsx'
 
 import type {
   HorseListItem,
@@ -68,10 +54,6 @@ type PendingHorsePhoto = {
   file: File
 }
 
-type BuyerType =
-  | 'client'
-  | 'external'
-
 const ALLOWED_SOURCE_IMAGE_TYPES =
   new Set([
     'image/jpeg',
@@ -79,84 +61,36 @@ const ALLOWED_SOURCE_IMAGE_TYPES =
     'image/webp',
   ])
 
-function getCurrentDateInputValue() {
-  const now =
-    new Date()
-
-  const year =
-    now.getFullYear()
-
-  const month =
-    String(
-      now.getMonth() + 1,
-    ).padStart(
-      2,
-      '0',
-    )
-
-  const day =
-    String(
-      now.getDate(),
-    ).padStart(
-      2,
-      '0',
-    )
-
-  return `${year}-${month}-${day}`
-}
-
-function dateInputToIso(
+function normalizeText(
   value: string,
 ) {
-  return new Date(
-    `${value}T12:00:00`,
-  ).toISOString()
+  return value
+    .normalize(
+      'NFD',
+    )
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
+    .toLowerCase()
+    .trim()
 }
 
 function formatMonthlyFee(
-  value: number | null,
-  ownershipType: HorseOwnershipType,
+  value: number,
 ) {
-  if (
-    ownershipType ===
-    'haras'
-  ) {
-    return 'Não se aplica'
-  }
-
-  if (
-    value === null
-  ) {
-    return 'Não informada'
-  }
-
   return new Intl.NumberFormat(
     'pt-BR',
     {
-      style: 'currency',
-      currency: 'BRL',
+      style:
+        'currency',
+
+      currency:
+        'BRL',
     },
   ).format(
     value,
   )
-}
-
-function getSexLabel(
-  sex: HorseListItem['sex'],
-) {
-  return sex ===
-    'male'
-    ? 'Macho'
-    : 'Fêmea'
-}
-
-function getOwnershipLabel(
-  ownershipType: HorseOwnershipType,
-) {
-  return ownershipType ===
-    'haras'
-    ? 'Do Haras'
-    : 'De cliente'
 }
 
 function formatHorseAge(
@@ -175,30 +109,30 @@ function formatHorseAge(
       '-',
     )
 
-  const year =
+  const birthYear =
     Number(
       yearText,
     )
 
-  const month =
+  const birthMonth =
     Number(
       monthText,
     )
 
-  const day =
+  const birthDay =
     Number(
       dayText,
     )
 
   if (
     !Number.isFinite(
-      year,
+      birthYear,
     ) ||
     !Number.isFinite(
-      month,
+      birthMonth,
     ) ||
     !Number.isFinite(
-      day,
+      birthDay,
     )
   ) {
     return 'Não informada'
@@ -209,16 +143,16 @@ function formatHorseAge(
 
   let years =
     today.getFullYear() -
-    year
+    birthYear
 
   let months =
     today.getMonth() +
     1 -
-    month
+    birthMonth
 
   if (
     today.getDate() <
-    day
+    birthDay
   ) {
     months -=
       1
@@ -242,6 +176,18 @@ function formatHorseAge(
     return 'Não informada'
   }
 
+  const yearLabel =
+    years ===
+    1
+      ? '1 ano'
+      : `${years} anos`
+
+  const monthLabel =
+    months ===
+    1
+      ? '1 mês'
+      : `${months} meses`
+
   if (
     years ===
       0 &&
@@ -251,70 +197,72 @@ function formatHorseAge(
     return 'Menos de 1 mês'
   }
 
-  const parts:
-    string[] =
-    []
-
   if (
-    years >
+    years ===
     0
   ) {
-    parts.push(
-      years ===
-      1
-        ? '1 ano'
-        : `${years} anos`,
-    )
+    return monthLabel
   }
 
   if (
-    months >
+    months ===
     0
   ) {
-    parts.push(
-      months ===
-      1
-        ? '1 mês'
-        : `${months} meses`,
-    )
+    return yearLabel
   }
 
-  return parts.join(
-    ' e ',
-  )
+  return `${yearLabel} e ${monthLabel}`
 }
 
-function normalizeText(
-  value: string,
+function formatLineage(
+  horse: HorseListItem,
 ) {
-  return value
-    .normalize(
-      'NFD',
-    )
-    .replace(
-      /[\u0300-\u036f]/g,
-      '',
-    )
-    .toLowerCase()
-    .trim()
+  if (
+    horse.lineageText?.trim()
+  ) {
+    return horse.lineageText
+  }
+
+  if (
+    horse.lineageFatherName &&
+    horse.lineageMotherName
+  ) {
+    return `${horse.lineageFatherName} × ${horse.lineageMotherName}`
+  }
+
+  return 'Não informada'
 }
 
 export function HorsesPage() {
-  const today =
-    getCurrentDateInputValue()
+  const [
+    searchParams,
+  ] = useSearchParams()
 
+  const area =
+    searchParams.get(
+      'area',
+    )
+
+  if (
+    area ===
+    'comercial'
+  ) {
+    return (
+      <HorseCommercialPage />
+    )
+  }
+
+  return (
+    <HorsesListPage />
+  )
+}
+
+function HorsesListPage() {
   const [
     horses,
     setHorses,
   ] = useState<
     HorseListItem[]
-  >([])
-
-  const [
-    clients,
-    setClients,
-  ] = useState<
-    Client[]
   >([])
 
   const [
@@ -339,69 +287,6 @@ export function HorsesPage() {
   >(null)
 
   const [
-    tradeHorse,
-    setTradeHorse,
-  ] = useState<
-    HorseListItem | null
-  >(null)
-
-  const [
-    tradeAmount,
-    setTradeAmount,
-  ] = useState(0)
-
-  const [
-    tradeDate,
-    setTradeDate,
-  ] = useState(
-    today,
-  )
-
-  const [
-    tradePaid,
-    setTradePaid,
-  ] = useState(true)
-
-  const [
-    buyerType,
-    setBuyerType,
-  ] = useState<BuyerType>(
-    'client',
-  )
-
-  const [
-    tradeClientId,
-    setTradeClientId,
-  ] = useState('')
-
-  const [
-    externalBuyerName,
-    setExternalBuyerName,
-  ] = useState('')
-
-  const [
-    keepsBoarding,
-    setKeepsBoarding,
-  ] = useState(true)
-
-  const [
-    tradeMonthlyFee,
-    setTradeMonthlyFee,
-  ] = useState(0)
-
-  const [
-    tradeSaving,
-    setTradeSaving,
-  ] = useState(false)
-
-  const [
-    tradeError,
-    setTradeError,
-  ] = useState<
-    string | null
-  >(null)
-
-  const [
     search,
     setSearch,
   ] = useState('')
@@ -409,58 +294,47 @@ export function HorsesPage() {
   const [
     loading,
     setLoading,
-  ] = useState(
-    true,
-  )
+  ] = useState(true)
 
   const [
     error,
     setError,
-  ] = useState<
-    string | null
-  >(null)
+  ] =
+    useState<string | null>(
+      null,
+    )
 
   const [
     photoError,
     setPhotoError,
-  ] = useState<
-    string | null
-  >(null)
+  ] =
+    useState<string | null>(
+      null,
+    )
 
   const [
     successMessage,
     setSuccessMessage,
-  ] = useState<
-    string | null
-  >(null)
+  ] =
+    useState<string | null>(
+      null,
+    )
 
   useEffect(() => {
     let isMounted =
       true
 
-    async function loadPage() {
+    async function loadHorses() {
       try {
-        const [
-          horseData,
-          clientData,
-        ] =
-          await Promise.all([
-            getHorses(),
-            getClients(),
-          ])
-
-        const activeClients =
-          clientData.filter(
-            (client) =>
-              client.active,
-          )
+        const data =
+          await getHorses()
 
         const nextPhotoUrls:
           Record<string, string> =
           {}
 
         await Promise.all(
-          horseData.map(
+          data.map(
             async (
               horse,
             ) => {
@@ -495,11 +369,7 @@ export function HorsesPage() {
           isMounted
         ) {
           setHorses(
-            horseData,
-          )
-
-          setClients(
-            activeClients,
+            data,
           )
 
           setPhotoUrls(
@@ -532,7 +402,7 @@ export function HorsesPage() {
       }
     }
 
-    loadPage()
+    void loadHorses()
 
     return () => {
       isMounted =
@@ -541,60 +411,63 @@ export function HorsesPage() {
   }, [])
 
   const filteredHorses =
-    useMemo(() => {
-      const normalizedSearch =
-        normalizeText(
-          search,
-        )
+    useMemo(
+      () => {
+        const normalizedSearch =
+          normalizeText(
+            search,
+          )
 
-      if (
-        !normalizedSearch
-      ) {
-        return horses
-      }
+        if (
+          !normalizedSearch
+        ) {
+          return horses
+        }
 
-      return horses.filter(
-        (horse) => {
-          const searchableContent =
-            [
+        return horses.filter(
+          (horse) => {
+            const lineage =
+              formatLineage(
+                horse,
+              )
+
+            const stage =
+              getHorseLifeStageLabel(
+                horse.sex,
+                horse.birthDate,
+              )
+
+            return [
               horse.name,
               horse.breed ??
                 '',
-              horse.clientName,
+              horse.ownerName,
               horse.stallName ??
                 '',
-              getOwnershipLabel(
-                horse.ownershipType,
-              ),
-              formatHorseAge(
-                horse.birthDate,
-              ),
-            ]
-
-          return searchableContent.some(
-            (value) =>
-              normalizeText(
-                value,
-              ).includes(
-                normalizedSearch,
-              ),
-          )
-        },
-      )
-    }, [
-      horses,
-      search,
-    ])
+              lineage,
+              stage,
+            ].some(
+              (value) =>
+                normalizeText(
+                  value,
+                ).includes(
+                  normalizedSearch,
+                ),
+            )
+          },
+        )
+      },
+      [
+        horses,
+        search,
+      ],
+    )
 
   const horseCountLabel =
     horses.length ===
     1
       ? '1 cavalo cadastrado'
       : `${horses.length} cavalos cadastrados`
-
-  const tradeIsSale =
-    tradeHorse?.ownershipType ===
-    'haras'
 
   function handlePhotoSelection(
     horse: HorseListItem,
@@ -733,368 +606,6 @@ export function HorsesPage() {
     }
   }
 
-  function openTradeForm(
-    horse: HorseListItem,
-  ) {
-    setTradeHorse(
-      horse,
-    )
-
-    setTradeAmount(
-      0,
-    )
-
-    setTradeDate(
-      today,
-    )
-
-    setTradePaid(
-      true,
-    )
-
-    setBuyerType(
-      'client',
-    )
-
-    setTradeClientId(
-      '',
-    )
-
-    setExternalBuyerName(
-      '',
-    )
-
-    setKeepsBoarding(
-      true,
-    )
-
-    setTradeMonthlyFee(
-      0,
-    )
-
-    setTradeError(
-      null,
-    )
-
-    setSuccessMessage(
-      null,
-    )
-  }
-
-  function closeTradeForm() {
-    if (
-      tradeSaving
-    ) {
-      return
-    }
-
-    setTradeHorse(
-      null,
-    )
-
-    setTradeError(
-      null,
-    )
-  }
-
-  function handleBuyerTypeChange(
-    value: BuyerType,
-  ) {
-    setBuyerType(
-      value,
-    )
-
-    setTradeError(
-      null,
-    )
-
-    if (
-      value ===
-      'external'
-    ) {
-      setTradeClientId(
-        '',
-      )
-
-      setKeepsBoarding(
-        false,
-      )
-
-      setTradeMonthlyFee(
-        0,
-      )
-
-      return
-    }
-
-    setExternalBuyerName(
-      '',
-    )
-
-    setKeepsBoarding(
-      true,
-    )
-  }
-
-  async function handleTradeSubmit(
-    event: SubmitEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault()
-
-    if (
-      !tradeHorse
-    ) {
-      return
-    }
-
-    setTradeError(
-      null,
-    )
-
-    setSuccessMessage(
-      null,
-    )
-
-    if (
-      !Number.isFinite(
-        tradeAmount,
-      ) ||
-      tradeAmount <=
-        0
-    ) {
-      setTradeError(
-        tradeIsSale
-          ? 'Informe o valor da venda.'
-          : 'Informe o valor da compra.',
-      )
-
-      return
-    }
-
-    if (
-      !tradeDate
-    ) {
-      setTradeError(
-        tradeIsSale
-          ? 'Informe a data da venda.'
-          : 'Informe a data da compra.',
-      )
-
-      return
-    }
-
-    if (
-      tradeDate >
-      today
-    ) {
-      setTradeError(
-        'A data da operação não pode estar no futuro.',
-      )
-
-      return
-    }
-
-    if (
-      tradeIsSale &&
-      buyerType ===
-        'client' &&
-      !tradeClientId
-    ) {
-      setTradeError(
-        'Selecione o cliente comprador.',
-      )
-
-      return
-    }
-
-    if (
-      tradeIsSale &&
-      buyerType ===
-        'external' &&
-      !externalBuyerName.trim()
-    ) {
-      setTradeError(
-        'Informe o nome do comprador.',
-      )
-
-      return
-    }
-
-    if (
-      tradeIsSale &&
-      buyerType ===
-        'external' &&
-      keepsBoarding
-    ) {
-      setTradeError(
-        'Para continuar hospedado, o comprador precisa estar cadastrado como cliente.',
-      )
-
-      return
-    }
-
-    if (
-      tradeIsSale &&
-      keepsBoarding &&
-      (
-        !Number.isFinite(
-          tradeMonthlyFee,
-        ) ||
-        tradeMonthlyFee <
-          0
-      )
-    ) {
-      setTradeError(
-        'Informe uma mensalidade válida.',
-      )
-
-      return
-    }
-
-    const tradeAt =
-      dateInputToIso(
-        tradeDate,
-      )
-
-    setTradeSaving(
-      true,
-    )
-
-    try {
-      if (
-        tradeIsSale
-      ) {
-        await registerHorseTrade(
-          {
-            horseId:
-              tradeHorse.id,
-
-            tradeType:
-              'sale',
-
-            amount:
-              tradeAmount,
-
-            tradeAt,
-
-            counterpartyClientId:
-              buyerType ===
-              'client'
-                ? tradeClientId
-                : null,
-
-            counterpartyName:
-              buyerType ===
-              'external'
-                ? externalBuyerName.trim()
-                : null,
-
-            paid:
-              tradePaid,
-
-            paidAt:
-              tradePaid
-                ? tradeAt
-                : null,
-
-            keepsBoarding:
-              buyerType ===
-                'client'
-                ? keepsBoarding
-                : false,
-
-            monthlyFee:
-              buyerType ===
-                  'client' &&
-                keepsBoarding &&
-                tradeMonthlyFee >
-                  0
-                ? tradeMonthlyFee
-                : null,
-
-            notes:
-              null,
-          },
-        )
-      } else {
-        await registerHorseTrade(
-          {
-            horseId:
-              tradeHorse.id,
-
-            tradeType:
-              'purchase',
-
-            amount:
-              tradeAmount,
-
-            tradeAt,
-
-            counterpartyClientId:
-              tradeHorse.clientId,
-
-            counterpartyName:
-              tradeHorse.clientId
-                ? null
-                : tradeHorse.clientName,
-
-            paid:
-              tradePaid,
-
-            paidAt:
-              tradePaid
-                ? tradeAt
-                : null,
-
-            keepsBoarding:
-              null,
-
-            monthlyFee:
-              null,
-
-            notes:
-              null,
-          },
-        )
-      }
-
-      const refreshedHorses =
-        await getHorses()
-
-      setHorses(
-        refreshedHorses,
-      )
-
-      const operationLabel =
-        tradeIsSale
-          ? 'Venda'
-          : 'Compra'
-
-      setTradeHorse(
-        null,
-      )
-
-      setSuccessMessage(
-        tradePaid
-          ? `${operationLabel} de ${tradeHorse.name} registrada. O Financeiro foi atualizado automaticamente.`
-          : `${operationLabel} de ${tradeHorse.name} registrada como pendente. O caixa só será alterado após a confirmação do pagamento.`,
-      )
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível registrar a operação comercial.'
-
-      setTradeError(
-        message,
-      )
-    } finally {
-      setTradeSaving(
-        false,
-      )
-    }
-  }
-
   return (
     <section className="horses-page">
       <header className="page-header">
@@ -1107,8 +618,7 @@ export function HorsesPage() {
         </h1>
 
         <p className="page-header__description">
-          Consulte os animais, proprietários, idades, baias e informações
-          financeiras do haras.
+          Consulte os animais e as informações essenciais da rotina do haras.
         </p>
       </header>
 
@@ -1121,7 +631,9 @@ export function HorsesPage() {
           <div className="horses-search">
             <Search
               size={16}
-              strokeWidth={1.8}
+              strokeWidth={
+                1.8
+              }
             />
 
             <input
@@ -1147,10 +659,26 @@ export function HorsesPage() {
           >
             <Utensils
               size={17}
-              strokeWidth={1.8}
+              strokeWidth={
+                1.8
+              }
             />
 
             Alimentação de hoje
+          </Link>
+
+          <Link
+            className="horses-commercial-button"
+            to="/cavalos?area=comercial"
+          >
+            <ArrowLeftRight
+              size={17}
+              strokeWidth={
+                1.8
+              }
+            />
+
+            Comercial
           </Link>
 
           <Link
@@ -1178,403 +706,6 @@ export function HorsesPage() {
         </div>
       )}
 
-      {tradeHorse && (
-        <section className="horse-trade-panel">
-          <div className="horse-trade-panel__header">
-            <div>
-              <span className="horse-trade-panel__eyebrow">
-                Operação comercial
-              </span>
-
-              <h2>
-                {tradeIsSale
-                  ? `Registrar venda de ${tradeHorse.name}`
-                  : `Registrar compra de ${tradeHorse.name}`}
-              </h2>
-
-              <p>
-                {tradeIsSale
-                  ? 'Registre a venda uma vez. O sistema atualiza propriedade, hospedagem e Financeiro.'
-                  : 'Registre a compra uma vez. O cavalo passa a pertencer ao Haras e o Financeiro é atualizado quando houver pagamento.'}
-              </p>
-            </div>
-
-            <button
-              className="horse-trade-panel__close"
-              type="button"
-              onClick={
-                closeTradeForm
-              }
-              disabled={
-                tradeSaving
-              }
-              aria-label="Fechar operação comercial"
-            >
-              <X
-                size={18}
-              />
-            </button>
-          </div>
-
-          <form
-            className="horse-trade-form"
-            onSubmit={
-              handleTradeSubmit
-            }
-          >
-            <div className="horse-trade-form__grid">
-              <div className="horse-trade-field">
-                <label htmlFor="tradeAmount">
-                  {tradeIsSale
-                    ? 'Valor da venda'
-                    : 'Valor da compra'}
-                </label>
-
-                <MoneyInput
-                  id="tradeAmount"
-                  value={
-                    tradeAmount
-                  }
-                  onChange={
-                    setTradeAmount
-                  }
-                />
-
-                <span>
-                  Digite como em um PIX.
-                </span>
-              </div>
-
-              <div className="horse-trade-field">
-                <label htmlFor="tradeDate">
-                  {tradeIsSale
-                    ? 'Data da venda'
-                    : 'Data da compra'}
-                </label>
-
-                <input
-                  id="tradeDate"
-                  name="tradeDate"
-                  type="date"
-                  max={
-                    today
-                  }
-                  value={
-                    tradeDate
-                  }
-                  onChange={(
-                    event,
-                  ) =>
-                    setTradeDate(
-                      event.target.value,
-                    )
-                  }
-                  required
-                />
-              </div>
-
-              {!tradeIsSale && (
-                <div className="horse-trade-field">
-                  <label>
-                    Vendedor
-                  </label>
-
-                  <div className="horse-trade-field__readonly">
-                    {tradeHorse.clientName}
-                  </div>
-
-                  <span>
-                    É o proprietário atual do cavalo.
-                  </span>
-                </div>
-              )}
-
-              {tradeIsSale && (
-                <>
-                  <div className="horse-trade-field">
-                    <label htmlFor="buyerType">
-                      Comprador
-                    </label>
-
-                    <select
-                      id="buyerType"
-                      name="buyerType"
-                      value={
-                        buyerType
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        handleBuyerTypeChange(
-                          event.target
-                            .value as BuyerType,
-                        )
-                      }
-                    >
-                      <option value="client">
-                        Cliente cadastrado
-                      </option>
-
-                      <option value="external">
-                        Outro comprador
-                      </option>
-                    </select>
-                  </div>
-
-                  {buyerType ===
-                    'client' ? (
-                    <div className="horse-trade-field">
-                      <label htmlFor="tradeClientId">
-                        Cliente comprador
-                      </label>
-
-                      <select
-                        id="tradeClientId"
-                        name="tradeClientId"
-                        value={
-                          tradeClientId
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setTradeClientId(
-                            event.target.value,
-                          )
-                        }
-                        required
-                      >
-                        <option value="">
-                          Selecione o cliente
-                        </option>
-
-                        {clients.map(
-                          (
-                            client,
-                          ) => (
-                            <option
-                              value={
-                                client.id
-                              }
-                              key={
-                                client.id
-                              }
-                            >
-                              {
-                                client.name
-                              }
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="horse-trade-field">
-                      <label htmlFor="externalBuyerName">
-                        Nome do comprador
-                      </label>
-
-                      <input
-                        id="externalBuyerName"
-                        name="externalBuyerName"
-                        type="text"
-                        value={
-                          externalBuyerName
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setExternalBuyerName(
-                            event.target.value,
-                          )
-                        }
-                        placeholder="Nome da pessoa ou empresa"
-                        autoComplete="off"
-                        required
-                      />
-
-                      <span>
-                        Comprador externo não precisa ser cadastrado se o cavalo
-                        sair do Haras.
-                      </span>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="horse-trade-field">
-                <label htmlFor="tradePaymentStatus">
-                  {tradeIsSale
-                    ? 'Situação do recebimento'
-                    : 'Situação do pagamento'}
-                </label>
-
-                <select
-                  id="tradePaymentStatus"
-                  name="tradePaymentStatus"
-                  value={
-                    tradePaid
-                      ? 'paid'
-                      : 'pending'
-                  }
-                  onChange={(
-                    event,
-                  ) =>
-                    setTradePaid(
-                      event.target.value ===
-                        'paid',
-                    )
-                  }
-                >
-                  <option value="paid">
-                    {tradeIsSale
-                      ? 'Já foi recebido'
-                      : 'Já foi pago'}
-                  </option>
-
-                  <option value="pending">
-                    {tradeIsSale
-                      ? 'Ainda não foi recebido'
-                      : 'Ainda não foi pago'}
-                  </option>
-                </select>
-
-                <span>
-                  {tradePaid
-                    ? 'Ao confirmar, o caixa do Financeiro será atualizado.'
-                    : 'Enquanto estiver pendente, não altera o caixa real.'}
-                </span>
-              </div>
-
-              {tradeIsSale &&
-                buyerType ===
-                  'client' && (
-                <>
-                  <div className="horse-trade-field">
-                    <label htmlFor="keepsBoarding">
-                      Continua hospedado no Haras?
-                    </label>
-
-                    <select
-                      id="keepsBoarding"
-                      name="keepsBoarding"
-                      value={
-                        keepsBoarding
-                          ? 'yes'
-                          : 'no'
-                      }
-                      onChange={(
-                        event,
-                      ) => {
-                        const nextValue =
-                          event.target.value ===
-                          'yes'
-
-                        setKeepsBoarding(
-                          nextValue,
-                        )
-
-                        if (
-                          !nextValue
-                        ) {
-                          setTradeMonthlyFee(
-                            0,
-                          )
-                        }
-                      }}
-                    >
-                      <option value="yes">
-                        Sim
-                      </option>
-
-                      <option value="no">
-                        Não
-                      </option>
-                    </select>
-
-                    <span>
-                      Se sair, o sistema libera a baia e encerra a rotina futura
-                      do animal.
-                    </span>
-                  </div>
-
-                  {keepsBoarding && (
-                    <div className="horse-trade-field">
-                      <label htmlFor="tradeMonthlyFee">
-                        Nova mensalidade
-                      </label>
-
-                      <MoneyInput
-                        id="tradeMonthlyFee"
-                        value={
-                          tradeMonthlyFee
-                        }
-                        onChange={
-                          setTradeMonthlyFee
-                        }
-                      />
-
-                      <span>
-                        Digite como em um PIX. Pode ajustar novamente depois.
-                      </span>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {tradeIsSale &&
-                buyerType ===
-                  'external' && (
-                <div className="horse-trade-info">
-                  <strong>
-                    O cavalo sairá do Haras
-                  </strong>
-
-                  <span>
-                    Para permanecer hospedado, primeiro cadastre o comprador em
-                    Clientes.
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {tradeError && (
-              <div className="horse-trade-form__error">
-                {tradeError}
-              </div>
-            )}
-
-            <div className="horse-trade-form__actions">
-              <button
-                className="horse-trade-cancel"
-                type="button"
-                onClick={
-                  closeTradeForm
-                }
-                disabled={
-                  tradeSaving
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                className="horse-trade-submit"
-                type="submit"
-                disabled={
-                  tradeSaving
-                }
-              >
-                {tradeSaving
-                  ? 'Registrando...'
-                  : tradeIsSale
-                    ? 'Confirmar venda'
-                    : 'Confirmar compra'}
-              </button>
-            </div>
-          </form>
-        </section>
-      )}
-
       {loading && (
         <div className="horses-state">
           Carregando cavalos...
@@ -1597,8 +728,7 @@ export function HorsesPage() {
             </strong>
 
             <span>
-              Cadastre o primeiro cavalo para começar a organizar os animais
-              do haras.
+              Cadastre o primeiro animal para começar a organizar o haras.
             </span>
 
             <Link
@@ -1641,6 +771,34 @@ export function HorsesPage() {
                   uploadingPhotoId ===
                   horse.id
 
+                const stageLabel =
+                  getHorseLifeStageLabel(
+                    horse.sex,
+                    horse.birthDate,
+                  )
+
+                const ageLabel =
+                  formatHorseAge(
+                    horse.birthDate,
+                  )
+
+                const lineageLabel =
+                  formatLineage(
+                    horse,
+                  )
+
+                const showMonthlyFee =
+                  horse.ownershipType ===
+                    'client' &&
+                  horse.monthlyFee !==
+                    null
+
+                const commercialMode =
+                  horse.ownershipType ===
+                  'haras'
+                    ? 'sale'
+                    : 'purchase'
+
                 return (
                   <article
                     className="horse-card"
@@ -1662,7 +820,9 @@ export function HorsesPage() {
                             <div className="horse-card__photo-placeholder">
                               <ImageIcon
                                 size={28}
-                                strokeWidth={1.6}
+                                strokeWidth={
+                                  1.6
+                                }
                               />
 
                               <span>
@@ -1681,7 +841,9 @@ export function HorsesPage() {
                         >
                           <Camera
                             size={14}
-                            strokeWidth={1.8}
+                            strokeWidth={
+                              1.8
+                            }
                           />
 
                           {uploadingPhoto
@@ -1722,33 +884,25 @@ export function HorsesPage() {
                             </span>
                           </div>
 
-                          <span
-                            className={`horse-card__status ${
-                              horse.active
-                                ? 'horse-card__status--active'
-                                : 'horse-card__status--inactive'
-                            }`}
-                          >
-                            {horse.active
-                              ? 'Ativo'
-                              : 'Inativo'}
-                          </span>
+                          {!horse.active && (
+                            <span className="horse-card__status horse-card__status--inactive">
+                              Inativo
+                            </span>
+                          )}
                         </div>
 
-                        <div className="horse-card__badges">
-                          <span className="horse-card__sex">
-                            {getSexLabel(
-                              horse.sex,
-                            )}
+                        <div className="horse-card__stage">
+                          {stageLabel}
+                        </div>
+
+                        <div className="horse-card__lineage">
+                          <span>
+                            Linhagem
                           </span>
 
-                          <span
-                            className={`horse-card__ownership horse-card__ownership--${horse.ownershipType}`}
-                          >
-                            {getOwnershipLabel(
-                              horse.ownershipType,
-                            )}
-                          </span>
+                          <strong>
+                            {lineageLabel}
+                          </strong>
                         </div>
                       </div>
                     </div>
@@ -1758,7 +912,9 @@ export function HorsesPage() {
                         <div className="horse-card__detail-icon">
                           <UserRound
                             size={17}
-                            strokeWidth={1.7}
+                            strokeWidth={
+                              1.7
+                            }
                           />
                         </div>
 
@@ -1768,9 +924,7 @@ export function HorsesPage() {
                           </span>
 
                           <strong>
-                            {
-                              horse.clientName
-                            }
+                            {horse.ownerName}
                           </strong>
                         </div>
                       </div>
@@ -1779,7 +933,9 @@ export function HorsesPage() {
                         <div className="horse-card__detail-icon">
                           <CalendarDays
                             size={17}
-                            strokeWidth={1.7}
+                            strokeWidth={
+                              1.7
+                            }
                           />
                         </div>
 
@@ -1789,9 +945,7 @@ export function HorsesPage() {
                           </span>
 
                           <strong>
-                            {formatHorseAge(
-                              horse.birthDate,
-                            )}
+                            {ageLabel}
                           </strong>
                         </div>
                       </div>
@@ -1800,7 +954,9 @@ export function HorsesPage() {
                         <div className="horse-card__detail-icon">
                           <DoorOpen
                             size={17}
-                            strokeWidth={1.7}
+                            strokeWidth={
+                              1.7
+                            }
                           />
                         </div>
 
@@ -1816,99 +972,60 @@ export function HorsesPage() {
                         </div>
                       </div>
 
-                      <div className="horse-card__detail">
-                        <div className="horse-card__detail-icon">
-                          <CircleDollarSign
-                            size={17}
-                            strokeWidth={1.7}
-                          />
-                        </div>
+                      {showMonthlyFee && (
+                        <div className="horse-card__detail">
+                          <div className="horse-card__detail-icon">
+                            <CircleDollarSign
+                              size={17}
+                              strokeWidth={
+                                1.7
+                              }
+                            />
+                          </div>
 
-                        <div>
-                          <span>
-                            Mensalidade
-                          </span>
+                          <div>
+                            <span>
+                              Mensalidade
+                            </span>
 
-                          <strong>
-                            {formatMonthlyFee(
-                              horse.monthlyFee,
-                              horse.ownershipType,
-                            )}
-                          </strong>
+                            <strong>
+                              {formatMonthlyFee(
+                                horse.monthlyFee as number,
+                              )}
+                            </strong>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     <div className="horse-card__actions">
                       <Link
-                        className="horse-card__feeding"
+                        className="horse-card__action"
                         to={`/cavalos/${horse.id}/alimentacao`}
                       >
                         <Utensils
                           size={15}
-                          strokeWidth={1.8}
+                          strokeWidth={
+                            1.8
+                          }
                         />
 
                         Plano alimentar
                       </Link>
 
-                      {horse.ownershipType ===
-                        'client' &&
-                        horse.active && (
-                        <Link
-                          className="horse-card__feeding"
-                          to={`/cavalos/${horse.id}/mensalidade`}
-                        >
-                          <CircleDollarSign
-                            size={15}
-                            strokeWidth={1.8}
-                          />
-
-                          Editar mensalidade
-                        </Link>
-                      )}
-
-                      {horse.active &&
-                        horse.ownershipType ===
-                          'client' && (
-                        <button
-                          className="horse-card__commercial horse-card__commercial--purchase"
-                          type="button"
-                          onClick={() =>
-                            openTradeForm(
-                              horse,
-                            )
+                      <Link
+                        className="horse-card__action horse-card__action--commercial"
+                        to={`/cavalos?area=comercial&mode=${commercialMode}&horse=${horse.id}`}
+                      >
+                        <ArrowLeftRight
+                          size={15}
+                          strokeWidth={
+                            1.8
                           }
-                        >
-                          <ShoppingCart
-                            size={15}
-                            strokeWidth={1.8}
-                          />
+                        />
 
-                          Registrar compra
-                        </button>
-                      )}
-
-                      {horse.active &&
-                        horse.ownershipType ===
-                          'haras' && (
-                        <button
-                          className="horse-card__commercial horse-card__commercial--sale"
-                          type="button"
-                          onClick={() =>
-                            openTradeForm(
-                              horse,
-                            )
-                          }
-                        >
-                          <Tag
-                            size={15}
-                            strokeWidth={1.8}
-                          />
-
-                          Registrar venda
-                        </button>
-                      )}
+                        Comercial
+                      </Link>
                     </div>
                   </article>
                 )

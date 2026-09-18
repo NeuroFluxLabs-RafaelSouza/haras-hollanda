@@ -24,6 +24,7 @@ export type CreateHorseWithOptionalPurchaseInput = {
   breed: string
   sex: HorseSex
   birthDate: string | null
+  lineageId: string | null
   ownershipType: HorseOwnershipType
   clientId: string | null
   stallId: string | null
@@ -438,7 +439,7 @@ export async function createHorseWithOptionalPurchase(
     data,
     error,
   } = await supabase.rpc(
-    'create_horse_with_optional_purchase',
+    'create_horse_with_optional_purchase_with_lineage',
     {
       p_name:
         input.name.trim(),
@@ -529,6 +530,9 @@ export async function createHorseWithOptionalPurchase(
               ?.trim() ||
             null
           : null,
+
+      p_lineage_id:
+        input.lineageId,
     },
   )
 

@@ -1,0 +1,524 @@
+.horse-commercial-page {
+  width: 100%;
+}
+
+.horse-commercial-header {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.horse-commercial-header__back {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.horse-commercial-header__back:hover {
+  color: var(--color-forest);
+}
+
+.horse-commercial-message {
+  margin-top: 20px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.horse-commercial-message--error {
+  border: 1px solid rgba(184, 78, 78, 0.2);
+  background: rgba(184, 78, 78, 0.06);
+  color: var(--color-danger);
+}
+
+.horse-commercial-message--success {
+  border: 1px solid rgba(63, 122, 87, 0.2);
+  background: rgba(63, 122, 87, 0.06);
+  color: var(--color-success);
+}
+
+.horse-commercial-mode {
+  margin-top: 30px;
+  padding: 5px;
+  display: inline-flex;
+  gap: 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-soft);
+}
+
+.horse-commercial-mode__button {
+  min-height: 42px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.horse-commercial-mode__button--active {
+  background: var(--color-surface);
+  color: var(--color-forest);
+  box-shadow:
+    0 1px 3px rgba(23, 53, 43, 0.08);
+}
+
+.horse-commercial-state {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.horse-commercial-panel {
+  margin-top: 20px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.horse-commercial-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.horse-commercial-panel__icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--color-surface-soft);
+  color: var(--color-moss);
+}
+
+.horse-commercial-panel__heading h2 {
+  margin: 0;
+  color: var(--color-forest);
+  font-size: 16px;
+}
+
+.horse-commercial-panel__heading p {
+  max-width: 660px;
+  margin: 5px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.horse-commercial-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.horse-commercial-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.horse-commercial-field--full {
+  grid-column: 1 / -1;
+}
+
+.horse-commercial-field label {
+  color: var(--color-text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.horse-commercial-field input,
+.horse-commercial-field select,
+.horse-commercial-field textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.horse-commercial-field textarea {
+  min-height: 82px;
+  padding-top: 11px;
+  resize: vertical;
+}
+
+.horse-commercial-field input:focus,
+.horse-commercial-field select:focus,
+.horse-commercial-field textarea:focus {
+  border-color: rgba(49, 83, 67, 0.45);
+}
+
+.horse-commercial-field small {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.horse-commercial-new-horse {
+  margin-top: 4px;
+  padding: 12px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px dashed rgba(49, 83, 67, 0.22);
+  border-radius: 10px;
+  background: rgba(49, 83, 67, 0.035);
+}
+
+.horse-commercial-new-horse > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.horse-commercial-new-horse strong {
+  color: var(--color-forest);
+  font-size: 10px;
+}
+
+.horse-commercial-new-horse span {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.horse-commercial-new-horse a {
+  min-height: 34px;
+  padding: 0 11px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(49, 83, 67, 0.2);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-forest);
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.horse-commercial-new-horse a:hover {
+  border-color: rgba(49, 83, 67, 0.4);
+  background: rgba(49, 83, 67, 0.07);
+}
+
+.horse-commercial-context {
+  padding: 13px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border: 1px solid rgba(49, 83, 67, 0.13);
+  border-radius: 11px;
+  background: rgba(49, 83, 67, 0.045);
+  color: var(--color-moss);
+}
+
+.horse-commercial-context > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.horse-commercial-context span {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.horse-commercial-context strong {
+  color: var(--color-forest);
+  font-size: 12px;
+}
+
+.horse-commercial-context small {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.horse-commercial-panel__actions {
+  margin-top: 22px;
+  padding-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border);
+}
+
+.horse-commercial-submit {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--color-forest);
+  border-radius: 10px;
+  background: var(--color-forest);
+  color: var(--color-surface);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.horse-commercial-submit:hover {
+  background: var(--color-moss);
+}
+
+.horse-commercial-submit:active {
+  transform: translateY(1px);
+}
+
+.horse-commercial-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.horse-commercial-pending {
+  margin-top: 22px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.horse-commercial-pending__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.horse-commercial-pending__heading span {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.horse-commercial-pending__heading h2 {
+  margin: 4px 0 0;
+  color: var(--color-forest);
+  font-size: 16px;
+}
+
+.horse-commercial-pending__heading p {
+  margin: 5px 0 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.horse-commercial-pending__count {
+  min-width: 42px;
+  min-height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 9px;
+  background: rgba(197, 139, 42, 0.1);
+  color: var(--color-warning);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.horse-commercial-empty {
+  margin-top: 20px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  color: var(--color-success);
+}
+
+.horse-commercial-empty > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.horse-commercial-empty strong {
+  color: var(--color-forest);
+  font-size: 11px;
+}
+
+.horse-commercial-empty span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.horse-commercial-pending__list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.horse-commercial-pending-card {
+  padding: 14px;
+  display: grid;
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+.horse-commercial-pending-card__icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--color-surface-soft);
+  color: var(--color-moss);
+}
+
+.horse-commercial-pending-card__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.horse-commercial-pending-card__content span {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.horse-commercial-pending-card__content strong {
+  overflow: hidden;
+  color: var(--color-forest);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.horse-commercial-pending-card__content small {
+  color: var(--color-text-muted);
+  font-size: 9px;
+}
+
+.horse-commercial-pending-card__value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.horse-commercial-pending-card__value strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.horse-commercial-pending-card__value button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(49, 83, 67, 0.18);
+  border-radius: 8px;
+  background: rgba(49, 83, 67, 0.06);
+  color: var(--color-forest);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.horse-commercial-pending-card__value button:hover {
+  background: rgba(49, 83, 67, 0.11);
+}
+
+.horse-commercial-pending-card__value button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .horse-commercial-mode {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .horse-commercial-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .horse-commercial-field--full {
+    grid-column: auto;
+  }
+
+  .horse-commercial-new-horse {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .horse-commercial-new-horse a {
+    width: 100%;
+  }
+
+  .horse-commercial-pending-card {
+    grid-template-columns:
+      auto minmax(0, 1fr);
+  }
+
+  .horse-commercial-pending-card__value {
+    grid-column: 1 / -1;
+    align-items: stretch;
+  }
+
+  .horse-commercial-pending-card__value button {
+    width: 100%;
+  }
+}

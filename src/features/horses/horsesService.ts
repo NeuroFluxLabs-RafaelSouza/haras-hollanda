@@ -26,6 +26,8 @@ type HorseRow = {
   stall_id: string | null
   monthly_fee: number | string | null
   photo_path: string | null
+  lineage_id: string | null
+  lineage_text: string | null
   active: boolean
   created_at: string
 }
@@ -41,6 +43,12 @@ type StallRelation = {
   status: StallStatus
 }
 
+type LineageRelation = {
+  id: string
+  father_name: string
+  mother_name: string
+}
+
 type Relation<T> =
   | T
   | T[]
@@ -50,6 +58,7 @@ type HorseListRow =
   HorseRow & {
     client: Relation<ClientRelation>
     stall: Relation<StallRelation>
+    lineage: Relation<LineageRelation>
   }
 
 type AvailableStallRow = {
@@ -67,28 +76,14 @@ type CorrectHorseMonthlyFeeRow = {
   current_charge_updated: boolean
 }
 
-type SetHorsePhotoPathRow = {
-  horse_id: string
-  saved_photo_path: string
-}
-
-type HorseUpdatePayload = {
-  name: string
-  breed: string | null
-  sex: HorseSex
-  client_id: string | null
-  stall_id: string | null
-  monthly_fee: number | null
-  active: boolean
-  birth_date?: string | null
-  ownership_type?: HorseOwnershipType
-}
-
 export type HorseListItem =
   Horse & {
     clientName: string
+    ownerName: string
     stallName: string | null
     stallStatus: StallStatus | null
+    lineageFatherName: string | null
+    lineageMotherName: string | null
   }
 
 export type HorsePhotoUploadResult = {
@@ -123,6 +118,8 @@ const horseSelect = `
   stall_id,
   monthly_fee,
   photo_path,
+  lineage_id,
+  lineage_text,
   active,
   created_at
 `
@@ -138,6 +135,8 @@ const horseListSelect = `
   stall_id,
   monthly_fee,
   photo_path,
+  lineage_id,
+  lineage_text,
   active,
   created_at,
   client:clients (
@@ -148,6 +147,11 @@ const horseListSelect = `
     id,
     name,
     status
+  ),
+  lineage:horse_lineages (
+    id,
+    father_name,
+    mother_name
   )
 `
 
@@ -209,6 +213,12 @@ function mapHorse(
     photoPath:
       row.photo_path,
 
+    lineageId:
+      row.lineage_id,
+
+    lineageText:
+      row.lineage_text,
+
     active:
       row.active,
 
@@ -230,6 +240,18 @@ function mapHorseListItem(
       row.stall,
     )
 
+  const lineage =
+    getSingleRelation(
+      row.lineage,
+    )
+
+  const ownerName =
+    row.ownership_type ===
+    'haras'
+      ? 'Haras Hollanda'
+      : client?.name ??
+        'Proprietário não informado'
+
   return {
     ...mapHorse(
       row,
@@ -237,12 +259,9 @@ function mapHorseListItem(
 
     clientName:
       client?.name ??
-      (
-        row.ownership_type ===
-        'haras'
-          ? 'Haras Hollanda'
-          : 'Cliente não identificado'
-      ),
+      ownerName,
+
+    ownerName,
 
     stallName:
       stall?.name ??
@@ -250,6 +269,14 @@ function mapHorseListItem(
 
     stallStatus:
       stall?.status ??
+      null,
+
+    lineageFatherName:
+      lineage?.father_name ??
+      null,
+
+    lineageMotherName:
+      lineage?.mother_name ??
       null,
   }
 }
@@ -326,14 +353,6 @@ export async function getHorsePhotoUrl(
     )
   }
 
-  if (
-    !data.signedUrl
-  ) {
-    throw new Error(
-      'O Storage não retornou uma URL para a foto do cavalo.',
-    )
-  }
-
   return data.signedUrl
 }
 
@@ -383,7 +402,6 @@ export async function uploadHorsePhoto(
   }
 
   const {
-    data: updateData,
     error: updateError,
   } = await supabase.rpc(
     'set_horse_photo_path',
@@ -406,32 +424,7 @@ export async function uploadHorsePhoto(
       ])
 
     throw new Error(
-      `Erro ao vincular foto ao cavalo: ${updateError.message}`,
-    )
-  }
-
-  const updateResult =
-    updateData?.[0] as
-      | SetHorsePhotoPathRow
-      | undefined
-
-  if (
-    !updateResult ||
-    updateResult.horse_id !==
-      horseId ||
-    updateResult.saved_photo_path !==
-      photoPath
-  ) {
-    await supabase.storage
-      .from(
-        MEDIA_BUCKET,
-      )
-      .remove([
-        photoPath,
-      ])
-
-    throw new Error(
-      'A foto foi enviada, mas não foi possível confirmar seu vínculo com o cavalo.',
+      `Erro ao salvar foto do cavalo: ${updateError.message}`,
     )
   }
 
@@ -656,7 +649,12 @@ export async function createHorse(
       sex:
         input.sex,
 
+      birth_date:
+        input.birthDate ??
+        null,
+
       ownership_type:
+        input.ownershipType ??
         'client',
 
       client_id:
@@ -667,6 +665,15 @@ export async function createHorse(
 
       monthly_fee:
         input.monthlyFee,
+
+      lineage_id:
+        input.lineageId ??
+        null,
+
+      lineage_text:
+        input.lineageText
+          ?.trim() ||
+        null,
     })
     .select(
       horseSelect,
@@ -688,35 +695,46 @@ export async function updateHorse(
   horseId: string,
   input: UpdateHorseInput,
 ): Promise<Horse> {
-  const payload:
-    HorseUpdatePayload = {
-      name:
-        input.name,
+  const updateData: {
+    name: string
+    breed: string | null
+    sex: HorseSex
+    client_id: string | null
+    stall_id: string | null
+    monthly_fee: number | null
+    active: boolean
+    birth_date?: string | null
+    ownership_type?: HorseOwnershipType
+    lineage_id?: string | null
+    lineage_text?: string | null
+  } = {
+    name:
+      input.name,
 
-      breed:
-        input.breed,
+    breed:
+      input.breed,
 
-      sex:
-        input.sex,
+    sex:
+      input.sex,
 
-      client_id:
-        input.clientId,
+    client_id:
+      input.clientId,
 
-      stall_id:
-        input.stallId,
+    stall_id:
+      input.stallId,
 
-      monthly_fee:
-        input.monthlyFee,
+    monthly_fee:
+      input.monthlyFee,
 
-      active:
-        input.active,
-    }
+    active:
+      input.active,
+  }
 
   if (
     input.birthDate !==
     undefined
   ) {
-    payload.birth_date =
+    updateData.birth_date =
       input.birthDate
   }
 
@@ -724,19 +742,26 @@ export async function updateHorse(
     input.ownershipType !==
     undefined
   ) {
-    payload.ownership_type =
+    updateData.ownership_type =
       input.ownershipType
+  }
 
-    if (
-      input.ownershipType ===
-      'haras'
-    ) {
-      payload.client_id =
-        null
+  if (
+    input.lineageId !==
+    undefined
+  ) {
+    updateData.lineage_id =
+      input.lineageId
+  }
 
-      payload.monthly_fee =
-        null
-    }
+  if (
+    input.lineageText !==
+    undefined
+  ) {
+    updateData.lineage_text =
+      input.lineageText
+        ?.trim() ||
+      null
   }
 
   const {
@@ -747,7 +772,7 @@ export async function updateHorse(
       'horses',
     )
     .update(
-      payload,
+      updateData,
     )
     .eq(
       'id',

@@ -17,6 +17,8 @@ export type Horse = {
   stallId: string | null
   monthlyFee: number | null
   photoPath: string | null
+  lineageId: string | null
+  lineageText: string | null
   active: boolean
   createdAt: string
 }
@@ -25,19 +27,25 @@ export type CreateHorseInput = {
   name: string
   breed: string | null
   sex: HorseSex
-  clientId: string
+  birthDate?: string | null
+  ownershipType?: HorseOwnershipType
+  clientId: string | null
   stallId: string | null
   monthlyFee: number | null
+  lineageId?: string | null
+  lineageText?: string | null
 }
 
 export type UpdateHorseInput = {
   name: string
   breed: string | null
   sex: HorseSex
+  birthDate?: string | null
+  ownershipType?: HorseOwnershipType
   clientId: string | null
   stallId: string | null
   monthlyFee: number | null
+  lineageId?: string | null
+  lineageText?: string | null
   active: boolean
-  birthDate?: string | null
-  ownershipType?: HorseOwnershipType
 }

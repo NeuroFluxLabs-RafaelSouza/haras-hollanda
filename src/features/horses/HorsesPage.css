@@ -1,10 +1,9 @@
 .horses-page {
   width: 100%;
-  max-width: var(--content-max-width);
 }
 
 .horses-toolbar {
-  margin-top: 32px;
+  margin-top: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -20,43 +19,36 @@
 .horses-toolbar__actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
 
 .horses-search {
-  position: relative;
   width: 230px;
+  min-height: 40px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
 }
 
-.horses-search > svg {
-  position: absolute;
-  top: 50%;
-  left: 13px;
-  transform: translateY(-50%);
-  color: var(--color-text-muted);
-  pointer-events: none;
+.horses-search:focus-within {
+  border-color: rgba(49, 83, 67, 0.4);
 }
 
 .horses-search input {
   width: 100%;
-  height: 42px;
-  padding: 0 13px 0 39px;
-  border: 1px solid var(--color-border);
-  border-radius: 11px;
-  outline: none;
-  background: var(--color-surface);
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
   color: var(--color-text);
   font: inherit;
   font-size: 12px;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.horses-search input:focus {
-  border-color: var(--color-moss);
-  box-shadow:
-    0 0 0 3px rgba(49, 83, 67, 0.08);
 }
 
 .horses-search input::placeholder {
@@ -64,15 +56,16 @@
 }
 
 .horses-add-button,
-.horses-feeding-today-button {
-  min-height: 42px;
-  padding: 0 16px;
+.horses-feeding-today-button,
+.horses-commercial-button {
+  min-height: 40px;
+  padding: 0 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  border-radius: 11px;
-  font-size: 12px;
+  gap: 7px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-decoration: none;
   transition:
@@ -82,261 +75,56 @@
 }
 
 .horses-add-button {
+  border: 1px solid var(--color-forest);
   background: var(--color-forest);
-  color: #ffffff;
+  color: var(--color-surface);
 }
 
 .horses-add-button:hover {
   background: var(--color-moss);
 }
 
-.horses-feeding-today-button {
-  border: 1px solid rgba(49, 83, 67, 0.2);
+.horses-feeding-today-button,
+.horses-commercial-button {
+  border: 1px solid rgba(49, 83, 67, 0.18);
   background: rgba(49, 83, 67, 0.06);
   color: var(--color-forest);
 }
 
-.horses-feeding-today-button:hover {
-  border-color: rgba(49, 83, 67, 0.34);
+.horses-feeding-today-button:hover,
+.horses-commercial-button:hover {
+  border-color: rgba(49, 83, 67, 0.32);
   background: rgba(49, 83, 67, 0.1);
 }
 
 .horses-add-button:active,
-.horses-feeding-today-button:active {
+.horses-feeding-today-button:active,
+.horses-commercial-button:active {
   transform: translateY(1px);
 }
 
 .horses-message {
   margin-top: 18px;
-  padding: 11px 13px;
+  padding: 12px 14px;
   border-radius: 10px;
   font-size: 11px;
   font-weight: 600;
-  line-height: 1.5;
 }
 
 .horses-message--error {
-  border: 1px solid rgba(184, 78, 78, 0.18);
+  border: 1px solid rgba(184, 78, 78, 0.2);
   background: rgba(184, 78, 78, 0.06);
   color: var(--color-danger);
 }
 
 .horses-message--success {
-  border: 1px solid rgba(63, 122, 87, 0.18);
-  background: rgba(63, 122, 87, 0.07);
+  border: 1px solid rgba(63, 122, 87, 0.2);
+  background: rgba(63, 122, 87, 0.06);
   color: var(--color-success);
 }
 
-.horse-trade-panel {
-  margin-top: 22px;
-  padding: 22px;
-  border: 1px solid rgba(49, 83, 67, 0.18);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.horse-trade-panel__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.horse-trade-panel__header > div {
-  min-width: 0;
-}
-
-.horse-trade-panel__eyebrow {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--color-terracotta);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.horse-trade-panel__header h2 {
-  margin: 0;
-  color: var(--color-forest);
-  font-size: 18px;
-  line-height: 1.25;
-}
-
-.horse-trade-panel__header p {
-  max-width: 660px;
-  margin: 7px 0 0;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  line-height: 1.6;
-}
-
-.horse-trade-panel__close {
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-}
-
-.horse-trade-panel__close:hover {
-  background: var(--color-surface-soft);
-  color: var(--color-forest);
-}
-
-.horse-trade-panel__close:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.horse-trade-form {
-  margin-top: 22px;
-  padding-top: 20px;
-  border-top: 1px solid var(--color-border);
-}
-
-.horse-trade-form__grid {
-  display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.horse-trade-field {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.horse-trade-field label {
-  color: var(--color-text);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.horse-trade-field > input,
-.horse-trade-field > select,
-.horse-trade-field__readonly {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 13px;
-  border: 1px solid var(--color-border);
-  border-radius: 11px;
-  outline: none;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 12px;
-}
-
-.horse-trade-field > input:focus,
-.horse-trade-field > select:focus {
-  border-color: var(--color-moss);
-  box-shadow:
-    0 0 0 3px rgba(49, 83, 67, 0.08);
-}
-
-.horse-trade-field__readonly {
-  display: flex;
-  align-items: center;
-  background: var(--color-surface-soft);
-  color: var(--color-forest);
-  font-weight: 700;
-}
-
-.horse-trade-field > span {
-  color: var(--color-text-muted);
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.horse-trade-info {
-  min-height: 74px;
-  padding: 13px 14px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  border: 1px solid rgba(197, 139, 42, 0.2);
-  border-radius: 11px;
-  background: rgba(197, 139, 42, 0.06);
-}
-
-.horse-trade-info strong {
-  color: var(--color-warning);
-  font-size: 11px;
-}
-
-.horse-trade-info span {
-  color: var(--color-text-muted);
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.horse-trade-form__error {
-  margin-top: 18px;
-  padding: 11px 13px;
-  border: 1px solid rgba(184, 78, 78, 0.18);
-  border-radius: 10px;
-  background: rgba(184, 78, 78, 0.06);
-  color: var(--color-danger);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.horse-trade-form__actions {
-  margin-top: 22px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 9px;
-}
-
-.horse-trade-cancel,
-.horse-trade-submit {
-  min-height: 40px;
-  padding: 0 16px;
-  border-radius: 10px;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.horse-trade-cancel {
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-muted);
-}
-
-.horse-trade-cancel:hover {
-  background: var(--color-surface-soft);
-}
-
-.horse-trade-submit {
-  border: 1px solid var(--color-forest);
-  background: var(--color-forest);
-  color: #ffffff;
-}
-
-.horse-trade-submit:hover {
-  background: var(--color-moss);
-}
-
-.horse-trade-cancel:disabled,
-.horse-trade-submit:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
 .horses-grid {
-  margin-top: 32px;
+  margin-top: 24px;
   display: grid;
   grid-template-columns:
     repeat(2, minmax(0, 1fr));
@@ -344,11 +132,13 @@
 }
 
 .horse-card {
-  padding: 22px;
+  min-width: 0;
+  padding: 18px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow:
+    0 1px 2px rgba(23, 53, 43, 0.03);
 }
 
 .horse-card__profile {
@@ -446,7 +236,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: 14px;
 }
 
 .horse-card__header > div {
@@ -482,46 +272,44 @@
   font-weight: 700;
 }
 
-.horse-card__status--active {
-  background: rgba(63, 122, 87, 0.1);
-  color: var(--color-success);
-}
-
 .horse-card__status--inactive {
-  background: rgba(113, 117, 109, 0.1);
-  color: var(--color-text-muted);
+  background: rgba(184, 78, 78, 0.08);
+  color: var(--color-danger);
 }
 
-.horse-card__badges {
+.horse-card__stage {
+  width: fit-content;
+  margin-top: 16px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--color-surface-soft);
+  color: var(--color-forest);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.horse-card__lineage {
   margin-top: 14px;
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.horse-card__sex,
-.horse-card__ownership {
-  width: fit-content;
-  padding: 5px 8px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.horse-card__sex {
-  background: var(--color-surface-soft);
+.horse-card__lineage span {
   color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-.horse-card__ownership--client {
-  background: rgba(201, 169, 107, 0.13);
-  color: var(--color-moss);
-}
-
-.horse-card__ownership--haras {
-  background: rgba(23, 53, 43, 0.1);
-  color: var(--color-forest);
+.horse-card__lineage strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
 }
 
 .horse-card__details {
@@ -529,8 +317,11 @@
   padding-top: 18px;
   display: grid;
   grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-  gap: 16px 14px;
+    repeat(
+      auto-fit,
+      minmax(135px, 1fr)
+    );
+  gap: 16px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -572,8 +363,8 @@
   color: var(--color-text);
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.35;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .horse-card__actions {
@@ -581,66 +372,46 @@
   padding-top: 16px;
   display: flex;
   justify-content: flex-end;
-  flex-wrap: wrap;
   gap: 8px;
   border-top: 1px solid var(--color-border);
 }
 
-.horse-card__feeding,
-.horse-card__commercial {
+.horse-card__action {
   min-height: 38px;
   padding: 0 13px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
+  border: 1px solid rgba(49, 83, 67, 0.16);
   border-radius: 9px;
-  font: inherit;
+  background: rgba(49, 83, 67, 0.06);
+  color: var(--color-forest);
   font-size: 11px;
   font-weight: 700;
   text-decoration: none;
-  cursor: pointer;
   transition:
     background 160ms ease,
     border-color 160ms ease,
     transform 160ms ease;
 }
 
-.horse-card__feeding {
-  border: 1px solid rgba(49, 83, 67, 0.16);
-  background: rgba(49, 83, 67, 0.06);
-  color: var(--color-forest);
-}
-
-.horse-card__feeding:hover {
+.horse-card__action:hover {
   border-color: rgba(49, 83, 67, 0.32);
   background: rgba(49, 83, 67, 0.1);
 }
 
-.horse-card__commercial--purchase {
-  border: 1px solid rgba(184, 110, 75, 0.22);
-  background: rgba(184, 110, 75, 0.08);
-  color: var(--color-terracotta);
-}
-
-.horse-card__commercial--purchase:hover {
-  border-color: rgba(184, 110, 75, 0.4);
-  background: rgba(184, 110, 75, 0.13);
-}
-
-.horse-card__commercial--sale {
-  border: 1px solid rgba(201, 169, 107, 0.35);
+.horse-card__action--commercial {
+  border-color: rgba(201, 169, 107, 0.4);
   background: rgba(201, 169, 107, 0.12);
-  color: var(--color-forest);
 }
 
-.horse-card__commercial--sale:hover {
-  border-color: rgba(201, 169, 107, 0.55);
+.horse-card__action--commercial:hover {
+  border-color: rgba(201, 169, 107, 0.7);
   background: rgba(201, 169, 107, 0.2);
 }
 
-.horse-card__feeding:active,
-.horse-card__commercial:active {
+.horse-card__action:active {
   transform: translateY(1px);
 }
 
@@ -697,7 +468,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .horses-grid {
     grid-template-columns: 1fr;
   }
@@ -719,20 +490,8 @@
   }
 
   .horses-add-button,
-  .horses-feeding-today-button {
-    width: 100%;
-  }
-
-  .horse-trade-form__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .horse-trade-form__actions {
-    flex-direction: column-reverse;
-  }
-
-  .horse-trade-cancel,
-  .horse-trade-submit {
+  .horses-feeding-today-button,
+  .horses-commercial-button {
     width: 100%;
   }
 
@@ -741,8 +500,7 @@
     justify-content: stretch;
   }
 
-  .horse-card__feeding,
-  .horse-card__commercial {
+  .horse-card__action {
     width: 100%;
   }
 }
@@ -765,15 +523,7 @@
     width: 150px;
   }
 
-  .horse-card__header {
-    gap: 12px;
-  }
-
   .horse-card__details {
     grid-template-columns: 1fr;
-  }
-
-  .horse-trade-panel {
-    padding: 18px;
   }
 }
