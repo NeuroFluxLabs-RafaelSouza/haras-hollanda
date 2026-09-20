@@ -16,7 +16,6 @@ import {
   GitBranch,
   Plus,
   ReceiptText,
-  UserRound,
 } from 'lucide-react'
 
 import {
@@ -70,6 +69,10 @@ import './HorseCommercialPage.css'
 type CommercialMode =
   | 'purchase'
   | 'sale'
+
+type SellerMode =
+  | 'client'
+  | 'external'
 
 type BuyerMode =
   | 'client'
@@ -273,6 +276,24 @@ export function HorseCommercialPage() {
   )
 
   const [
+    sellerMode,
+    setSellerMode,
+  ] =
+    useState<SellerMode>(
+      'external',
+    )
+
+  const [
+    sellerClientId,
+    setSellerClientId,
+  ] = useState('')
+
+  const [
+    externalSellerName,
+    setExternalSellerName,
+  ] = useState('')
+
+  const [
     purchaseFatherName,
     setPurchaseFatherName,
   ] = useState('')
@@ -470,9 +491,7 @@ export function HorseCommercialPage() {
           (horse) =>
             horse.active &&
             horse.ownershipType ===
-              'client' &&
-            horse.clientId !==
-              null,
+              'client',
         ),
       [
         horses,
@@ -535,6 +554,18 @@ export function HorseCommercialPage() {
         '',
       )
 
+      setSellerMode(
+        'external',
+      )
+
+      setSellerClientId(
+        '',
+      )
+
+      setExternalSellerName(
+        '',
+      )
+
       return
     }
 
@@ -547,9 +578,54 @@ export function HorseCommercialPage() {
       selectedPurchaseHorse.lineageMotherName ??
         '',
     )
+
+    if (
+      selectedPurchaseHorse.clientId
+    ) {
+      setSellerMode(
+        'client',
+      )
+
+      setSellerClientId(
+        selectedPurchaseHorse.clientId,
+      )
+
+      setExternalSellerName(
+        '',
+      )
+
+      return
+    }
+
+    setSellerMode(
+      'external',
+    )
+
+    setSellerClientId(
+      '',
+    )
+
+    setExternalSellerName(
+      '',
+    )
   }, [
     selectedPurchaseHorse,
   ])
+
+  const selectedSeller =
+    useMemo(
+      () =>
+        clients.find(
+          (client) =>
+            client.id ===
+            sellerClientId,
+        ) ??
+        null,
+      [
+        clients,
+        sellerClientId,
+      ],
+    )
 
   const selectedBuyer =
     useMemo(
@@ -729,6 +805,33 @@ export function HorseCommercialPage() {
     )
   }
 
+  function handleSellerModeChange(
+    nextMode: SellerMode,
+  ) {
+    setSellerMode(
+      nextMode,
+    )
+
+    setError(
+      null,
+    )
+
+    if (
+      nextMode ===
+      'client'
+    ) {
+      setExternalSellerName(
+        '',
+      )
+
+      return
+    }
+
+    setSellerClientId(
+      '',
+    )
+  }
+
   function handleBuyerModeChange(
     nextMode: BuyerMode,
   ) {
@@ -788,10 +891,24 @@ export function HorseCommercialPage() {
     }
 
     if (
-      !selectedPurchaseHorse.clientId
+      sellerMode ===
+        'client' &&
+      !selectedSeller
     ) {
       setError(
-        'O cavalo selecionado não possui proprietário cadastrado.',
+        'Selecione o vendedor.',
+      )
+
+      return
+    }
+
+    if (
+      sellerMode ===
+        'external' &&
+      !externalSellerName.trim()
+    ) {
+      setError(
+        'Informe o nome do vendedor.',
       )
 
       return
@@ -893,10 +1010,18 @@ export function HorseCommercialPage() {
           tradeAt,
 
           counterpartyClientId:
-            selectedPurchaseHorse.clientId,
+            sellerMode ===
+            'client'
+              ? selectedSeller?.id ??
+                null
+              : null,
 
           counterpartyName:
-            selectedPurchaseHorse.ownerName,
+            sellerMode ===
+            'client'
+              ? selectedSeller?.name ??
+                null
+              : externalSellerName.trim(),
 
           paid:
             purchasePaid,
@@ -919,6 +1044,18 @@ export function HorseCommercialPage() {
       )
 
       setPurchaseHorseId(
+        '',
+      )
+
+      setSellerMode(
+        'external',
+      )
+
+      setSellerClientId(
+        '',
+      )
+
+      setExternalSellerName(
         '',
       )
 
@@ -1389,8 +1526,7 @@ export function HorseCommercialPage() {
                   </h2>
 
                   <p>
-                    Selecione o animal. O sistema reaproveita os dados já
-                    cadastrados sempre que possível.
+                    Selecione o animal e informe de quem o Haras está comprando.
                   </p>
                 </div>
               </div>
@@ -1440,25 +1576,83 @@ export function HorseCommercialPage() {
                   </div>
                 </div>
 
-                {selectedPurchaseHorse && (
-                  <div className="horse-commercial-context horse-commercial-field--full">
-                    <UserRound
-                      size={18}
+                <div className="horse-commercial-field">
+                  <label htmlFor="sellerMode">
+                    Vendedor
+                  </label>
+
+                  <select
+                    id="sellerMode"
+                    value={
+                      sellerMode
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      handleSellerModeChange(
+                        event.target
+                          .value as SellerMode,
+                      )
+                    }
+                  >
+                    <option value="client">
+                      Cliente cadastrado
+                    </option>
+
+                    <option value="external">
+                      Vendedor externo
+                    </option>
+                  </select>
+                </div>
+
+                {sellerMode ===
+                  'client' ? (
+                  <div className="horse-commercial-field">
+                    <label>
+                      Pesquisar vendedor
+                    </label>
+
+                    <SearchableSelect
+                      id="sellerClient"
+                      value={
+                        sellerClientId
+                      }
+                      options={
+                        clientOptions
+                      }
+                      placeholder="Pesquise o cliente..."
+                      emptyMessage="Nenhum cliente encontrado."
+                      onChange={
+                        setSellerClientId
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="horse-commercial-field">
+                    <label htmlFor="externalSeller">
+                      Nome do vendedor
+                    </label>
+
+                    <input
+                      id="externalSeller"
+                      type="text"
+                      value={
+                        externalSellerName
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setExternalSellerName(
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Ex: João da Silva"
+                      autoComplete="off"
                     />
 
-                    <div>
-                      <span>
-                        Vendedor
-                      </span>
-
-                      <strong>
-                        {selectedPurchaseHorse.ownerName}
-                      </strong>
-
-                      <small>
-                        Identificado automaticamente pelo proprietário atual.
-                      </small>
-                    </div>
+                    <small>
+                      Não é necessário cadastrar o vendedor como cliente.
+                    </small>
                   </div>
                 )}
 
@@ -1481,10 +1675,6 @@ export function HorseCommercialPage() {
                       setPurchaseFatherName
                     }
                   />
-
-                  <small>
-                    Pesquise entre os pais já cadastrados.
-                  </small>
                 </div>
 
                 <div className="horse-commercial-field">
@@ -1506,10 +1696,6 @@ export function HorseCommercialPage() {
                       setPurchaseMotherName
                     }
                   />
-
-                  <small>
-                    Pesquise entre as mães já cadastradas.
-                  </small>
                 </div>
 
                 <div className="horse-commercial-field">
@@ -1745,7 +1931,7 @@ export function HorseCommercialPage() {
                 {buyerMode ===
                   'client' ? (
                   <div className="horse-commercial-field">
-                    <label htmlFor="buyerClient">
+                    <label>
                       Cliente
                     </label>
 
