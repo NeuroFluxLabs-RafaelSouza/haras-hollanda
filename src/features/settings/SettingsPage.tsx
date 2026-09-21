@@ -27,6 +27,7 @@ import {
 } from './settingsService.ts'
 
 import './SettingsPage.css'
+import { StallCountSettings } from './StallCountSettings.tsx'
 
 export function SettingsPage() {
   const [
@@ -703,6 +704,7 @@ export function SettingsPage() {
             </footer>
           </form>
         )}
+        <StallCountSettings />
       </section>
 
       {pendingLogoFile && (

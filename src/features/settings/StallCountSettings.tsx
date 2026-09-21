@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type SubmitEvent,
 } from 'react'
@@ -19,6 +20,7 @@ import {
 import './StallCountSettings.css'
 
 export function StallCountSettings() {
+  const submittingRef = useRef(false)
   const [
     currentCount,
     setCurrentCount,
@@ -123,15 +125,6 @@ export function StallCountSettings() {
     parsedTargetCount <=
       500
 
-  const missingCount =
-    targetIsValid
-      ? Math.max(
-          parsedTargetCount -
-            currentCount,
-          0,
-        )
-      : 0
-
   const targetIsLower =
     targetIsValid &&
     parsedTargetCount <
@@ -141,6 +134,10 @@ export function StallCountSettings() {
     event: SubmitEvent<HTMLFormElement>,
   ) {
     event.preventDefault()
+
+    if (submittingRef.current || loading) {
+      return
+    }
 
     setError(
       null,
@@ -160,6 +157,7 @@ export function StallCountSettings() {
       return
     }
 
+    submittingRef.current = true
     setSaving(
       true,
     )
@@ -176,7 +174,7 @@ export function StallCountSettings() {
 
       setTargetCount(
         String(
-          result.totalCount,
+          result.requestedCount,
         ),
       )
 
@@ -218,6 +216,7 @@ export function StallCountSettings() {
         message,
       )
     } finally {
+      submittingRef.current = false
       setSaving(
         false,
       )
@@ -298,6 +297,8 @@ export function StallCountSettings() {
                 min={1}
                 max={500}
                 step={1}
+                disabled={saving}
+                required
                 value={
                   targetCount
                 }
@@ -333,20 +334,6 @@ export function StallCountSettings() {
                 <strong>
                   Informe uma quantidade entre 1 e 500.
                 </strong>
-              ) : missingCount >
-                0 ? (
-                <>
-                  <strong>
-                    {missingCount ===
-                    1
-                      ? '1 nova baia será criada'
-                      : `${missingCount} novas baias serão criadas`}
-                  </strong>
-
-                  <small>
-                    O total passará de {currentCount} para {parsedTargetCount}.
-                  </small>
-                </>
               ) : targetIsLower ? (
                 <>
                   <strong>
@@ -355,17 +342,20 @@ export function StallCountSettings() {
 
                   <small>
                     Atualmente existem {currentCount} baias. Reduzir este número
-                    não apaga baias existentes nem seu histórico.
+                    não apaga baias existentes nem seu histórico. Números
+                    ausentes até Baia {String(parsedTargetCount).padStart(2, '0')}
+                    {' '}serão criados.
                   </small>
                 </>
               ) : (
                 <>
                   <strong>
-                    Nenhuma alteração necessária
+                    Baia 01 até Baia {String(parsedTargetCount).padStart(2, '0')}
                   </strong>
 
                   <small>
-                    O Haras já possui {currentCount} baias cadastradas.
+                    Apenas as baias ausentes serão criadas. As existentes
+                    serão preservadas, inclusive as que estiverem fora dessa sequência.
                   </small>
                 </>
               )}

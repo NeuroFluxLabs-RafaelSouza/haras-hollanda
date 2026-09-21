@@ -15,7 +15,6 @@ import {
 import {
   Link,
   useNavigate,
-  useSearchParams,
 } from 'react-router-dom'
 
 import {
@@ -63,15 +62,8 @@ import {
 
 import './NewHorsesPage.css'
 
-type CommercialMode =
-  | 'purchase'
-  | 'sale'
-
-type SubmitIntent =
-  | 'save'
-  | 'purchase'
-
-const breedOptions: SearchableSelectOption[] =
+const breedOptions:
+  SearchableSelectOption[] =
   HORSE_BREEDS.map(
     (breed) => ({
       value:
@@ -112,43 +104,11 @@ export function NewHorsesPage() {
   const navigate =
     useNavigate()
 
-  const [
-    searchParams,
-  ] = useSearchParams()
-
-  const submitIntentRef =
-    useRef<SubmitIntent>(
-      'save',
-    )
+  const submittingRef =
+    useRef(false)
 
   const today =
     getCurrentDateInputValue()
-
-  const returnTo =
-    searchParams.get(
-      'returnTo',
-    )
-
-  const commercialMode:
-    CommercialMode =
-    searchParams.get(
-      'mode',
-    ) ===
-    'sale'
-      ? 'sale'
-      : 'purchase'
-
-  const cameFromCommercial =
-    returnTo ===
-    'comercial'
-
-  const initialOwnershipType:
-    HorseOwnershipType =
-    cameFromCommercial &&
-    commercialMode ===
-      'sale'
-      ? 'haras'
-      : 'client'
 
   const [
     clients,
@@ -202,7 +162,7 @@ export function NewHorsesPage() {
     setOwnershipType,
   ] =
     useState<HorseOwnershipType>(
-      initialOwnershipType,
+      'client',
     )
 
   const [
@@ -252,7 +212,9 @@ export function NewHorsesPage() {
           getAvailableStalls(),
         ])
 
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -267,7 +229,9 @@ export function NewHorsesPage() {
           stallsData,
         )
       } catch (error) {
-        if (!isMounted) {
+        if (
+          !isMounted
+        ) {
           return
         }
 
@@ -280,7 +244,9 @@ export function NewHorsesPage() {
           message,
         )
       } finally {
-        if (isMounted) {
+        if (
+          isMounted
+        ) {
           setLoadingOptions(
             false,
           )
@@ -354,6 +320,13 @@ export function NewHorsesPage() {
   ) {
     event.preventDefault()
 
+    if (
+      submittingRef.current ||
+      loadingOptions
+    ) {
+      return
+    }
+
     setError(
       null,
     )
@@ -367,16 +340,9 @@ export function NewHorsesPage() {
     const trimmedMotherName =
       motherName.trim()
 
-    const shouldOpenPurchase =
-      submitIntentRef.current ===
-        'purchase' ||
-      (
-        cameFromCommercial &&
-        commercialMode ===
-          'purchase'
-      )
-
-    if (!trimmedName) {
+    if (
+      !trimmedName
+    ) {
       setError(
         'Informe o nome do cavalo.',
       )
@@ -384,7 +350,9 @@ export function NewHorsesPage() {
       return
     }
 
-    if (!breed) {
+    if (
+      !breed
+    ) {
       setError(
         'Selecione a raça do cavalo.',
       )
@@ -414,20 +382,6 @@ export function NewHorsesPage() {
       return
     }
 
-    if (
-      shouldOpenPurchase &&
-      (
-        !trimmedFatherName ||
-        !trimmedMotherName
-      )
-    ) {
-      setError(
-        'Para registrar uma compra, informe o pai e a mãe do cavalo.',
-      )
-
-      return
-    }
-
     const hasOnlyOneParent =
       (
         trimmedFatherName &&
@@ -449,7 +403,6 @@ export function NewHorsesPage() {
     }
 
     if (
-      !shouldOpenPurchase &&
       ownershipType ===
         'client' &&
       !clientId
@@ -462,7 +415,6 @@ export function NewHorsesPage() {
     }
 
     if (
-      !shouldOpenPurchase &&
       ownershipType ===
         'client' &&
       (
@@ -479,6 +431,9 @@ export function NewHorsesPage() {
 
       return
     }
+
+    submittingRef.current =
+      true
 
     setSaving(
       true,
@@ -509,77 +464,52 @@ export function NewHorsesPage() {
           lineage.id
       }
 
-      const createdHorse =
-        await createHorse(
-          {
-            name:
-              trimmedName,
+      await createHorse(
+        {
+          name:
+            trimmedName,
 
-            breed,
+          breed,
 
-            sex,
+          sex,
 
-            birthDate:
-              birthDate ||
-              null,
+          birthDate:
+            birthDate ||
+            null,
 
-            lineageId,
+          lineageId,
 
-            lineageText:
-              null,
+          lineageText:
+            null,
 
-            ownershipType:
-              shouldOpenPurchase
-                ? 'client'
-                : ownershipType,
+          ownershipType,
 
-            clientId:
-              shouldOpenPurchase
-                ? clientId ||
-                  null
-                : ownershipType ===
-                    'client'
-                  ? clientId
-                  : null,
+          clientId:
+            ownershipType ===
+              'client'
+              ? clientId
+              : null,
 
-            stallId:
-              stallId ||
-              null,
+          stallId:
+            stallId ||
+            null,
 
-            monthlyFee:
-              shouldOpenPurchase
-                ? null
-                : ownershipType ===
-                      'client' &&
-                    monthlyFee >
-                      0
-                  ? monthlyFee
-                  : null,
-          },
-        )
-
-      if (
-        shouldOpenPurchase
-      ) {
-        navigate(
-          `/cavalos?area=comercial&mode=purchase&horse=${createdHorse.id}`,
-        )
-
-        return
-      }
-
-      if (
-        cameFromCommercial
-      ) {
-        navigate(
-          `/cavalos?area=comercial&mode=${commercialMode}&horse=${createdHorse.id}`,
-        )
-
-        return
-      }
+          monthlyFee:
+            ownershipType ===
+                'client' &&
+              monthlyFee >
+                0
+              ? monthlyFee
+              : null,
+        },
+      )
 
       navigate(
         '/cavalos',
+        {
+          replace:
+            true,
+        },
       )
     } catch (error) {
       const message =
@@ -591,16 +521,14 @@ export function NewHorsesPage() {
         message,
       )
     } finally {
+      submittingRef.current =
+        false
+
       setSaving(
         false,
       )
     }
   }
-
-  const cancelUrl =
-    cameFromCommercial
-      ? `/cavalos?area=comercial&mode=${commercialMode}`
-      : '/cavalos'
 
   const submitDisabled =
     saving ||
@@ -611,17 +539,13 @@ export function NewHorsesPage() {
       <header className="new-horse-header">
         <Link
           className="new-horse-header__back"
-          to={
-            cancelUrl
-          }
+          to="/cavalos"
         >
           <ArrowLeft
             size={17}
           />
 
-          {cameFromCommercial
-            ? 'Comercial'
-            : 'Cavalos'}
+          Cavalos
         </Link>
 
         <div>
@@ -634,20 +558,11 @@ export function NewHorsesPage() {
           </h1>
 
           <p className="page-header__description">
-            Cadastre somente as informações necessárias para identificar e
-            organizar o animal.
+            Cadastre animais que já fazem parte da rotina do Haras.
+            Compras de novos animais são registradas somente na área Comercial.
           </p>
         </div>
       </header>
-
-      {cameFromCommercial && (
-        <div className="new-horse-form__state">
-          {commercialMode ===
-          'purchase'
-            ? 'Após o cadastro, o sistema volta para a compra com este cavalo já selecionado.'
-            : 'Após o cadastro, o sistema volta para a venda com este cavalo já selecionado.'}
-        </div>
-      )}
 
       <form
         className="new-horse-form"
@@ -807,10 +722,6 @@ export function NewHorsesPage() {
                 placeholder="Nome do pai"
                 autoComplete="off"
               />
-
-              <span className="new-horse-field__help">
-                Opcional no cadastro comum. Obrigatório para uma compra.
-              </span>
             </div>
 
             <div className="new-horse-field">
@@ -860,8 +771,8 @@ export function NewHorsesPage() {
               </h2>
 
               <p>
-                Informe quando o animal já pertence a um cliente ou ao Haras.
-                Em uma compra, o vendedor poderá ser informado na próxima tela.
+                Use este cadastro para animais de clientes ou para animais
+                que já pertencem ao Haras.
               </p>
             </div>
           </div>
@@ -924,7 +835,7 @@ export function NewHorsesPage() {
                     }
                   >
                     <option value="">
-                      Não informar agora
+                      Selecione o proprietário
                     </option>
 
                     {clients.map(
@@ -946,12 +857,6 @@ export function NewHorsesPage() {
                       ),
                     )}
                   </select>
-
-                  <span className="new-horse-field__help">
-                    No cadastro comum o proprietário é obrigatório. Para
-                    registrar uma compra, você pode informar o vendedor na
-                    próxima tela.
-                  </span>
                 </div>
               )}
 
@@ -1030,67 +935,22 @@ export function NewHorsesPage() {
         <div className="new-horse-form__actions">
           <Link
             className="new-horse-cancel"
-            to={
-              cancelUrl
-            }
+            to="/cavalos"
           >
             Cancelar
           </Link>
 
-          {cameFromCommercial ? (
-            <button
-              className="new-horse-submit"
-              type="submit"
-              disabled={
-                submitDisabled
-              }
-              onClick={() => {
-                submitIntentRef.current =
-                  commercialMode ===
-                    'purchase'
-                    ? 'purchase'
-                    : 'save'
-              }}
-            >
-              {saving
-                ? 'Cadastrando...'
-                : 'Cadastrar e continuar'}
-            </button>
-          ) : (
-            <>
-              <button
-                className="new-horse-submit"
-                type="submit"
-                disabled={
-                  submitDisabled
-                }
-                onClick={() => {
-                  submitIntentRef.current =
-                    'save'
-                }}
-              >
-                {saving
-                  ? 'Cadastrando...'
-                  : 'Cadastrar cavalo'}
-              </button>
-
-              <button
-                className="new-horse-submit"
-                type="submit"
-                disabled={
-                  submitDisabled
-                }
-                onClick={() => {
-                  submitIntentRef.current =
-                    'purchase'
-                }}
-              >
-                {saving
-                  ? 'Salvando...'
-                  : 'Cadastrar e registrar compra'}
-              </button>
-            </>
-          )}
+          <button
+            className="new-horse-submit"
+            type="submit"
+            disabled={
+              submitDisabled
+            }
+          >
+            {saving
+              ? 'Cadastrando...'
+              : 'Cadastrar cavalo'}
+          </button>
         </div>
       </form>
     </section>

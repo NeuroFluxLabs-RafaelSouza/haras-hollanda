@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type SubmitEvent,
 } from 'react'
@@ -14,7 +15,6 @@ import {
   CheckCircle2,
   Clock3,
   GitBranch,
-  Plus,
   ReceiptText,
 } from 'lucide-react'
 
@@ -33,12 +33,20 @@ import {
 } from '../../components/ui/SearchableSelect.tsx'
 
 import type {
+  HorseSex,
+} from '../../domain/horse.ts'
+
+import {
+  HORSE_BREEDS,
+} from '../../domain/horseBreeds.ts'
+
+import type {
   HorseTrade,
 } from '../../domain/horseTrade.ts'
 
 import type {
-  HorseLineage,
-} from '../../domain/horseLineage.ts'
+  Stall,
+} from '../../domain/stall.ts'
 
 import {
   getClients,
@@ -46,7 +54,6 @@ import {
 
 import {
   createHorseLineage,
-  getHorseLineages,
 } from './horseLineagesService.ts'
 
 import {
@@ -55,11 +62,13 @@ import {
 
 import {
   confirmHorseTradePayment,
+  createHorseWithOptionalPurchase,
   getPendingHorseTrades,
   registerHorseTrade,
 } from './horseTradesService.ts'
 
 import {
+  getAvailableStalls,
   getHorses,
   type HorseListItem,
 } from './horsesService.ts'
@@ -84,6 +93,18 @@ type CommercialClientList =
       typeof getClients
     >
   >
+
+const breedOptions:
+  SearchableSelectOption[] =
+  HORSE_BREEDS.map(
+    (breed) => ({
+      value:
+        breed,
+
+      label:
+        breed,
+    }),
+  )
 
 function getCurrentDateInputValue() {
   const now =
@@ -176,33 +197,10 @@ function getHorseLineageLabel(
   return 'Não informada'
 }
 
-function uniqueParentNames(
-  values: string[],
-) {
-  return Array.from(
-    new Set(
-      values
-        .map(
-          (value) =>
-            value.trim(),
-        )
-        .filter(
-          Boolean,
-        ),
-    ),
-  ).sort(
-    (
-      first,
-      second,
-    ) =>
-      first.localeCompare(
-        second,
-        'pt-BR',
-      ),
-  )
-}
-
 export function HorseCommercialPage() {
+  const purchaseSubmittingRef =
+    useRef(false)
+
   const today =
     getCurrentDateInputValue()
 
@@ -251,10 +249,10 @@ export function HorseCommercialPage() {
     )
 
   const [
-    lineages,
-    setLineages,
+    availableStalls,
+    setAvailableStalls,
   ] = useState<
-    HorseLineage[]
+    Stall[]
   >([])
 
   const [
@@ -265,15 +263,32 @@ export function HorseCommercialPage() {
   >([])
 
   const [
-    purchaseHorseId,
-    setPurchaseHorseId,
-  ] = useState(
-    initialMode ===
-      'purchase'
-      ? horseFromUrl ??
-        ''
-      : '',
-  )
+    purchaseName,
+    setPurchaseName,
+  ] = useState('')
+
+  const [
+    purchaseBreed,
+    setPurchaseBreed,
+  ] = useState('')
+
+  const [
+    purchaseSex,
+    setPurchaseSex,
+  ] =
+    useState<HorseSex>(
+      'male',
+    )
+
+  const [
+    purchaseBirthDate,
+    setPurchaseBirthDate,
+  ] = useState('')
+
+  const [
+    purchaseStallId,
+    setPurchaseStallId,
+  ] = useState('')
 
   const [
     sellerMode,
@@ -432,13 +447,13 @@ export function HorseCommercialPage() {
           const [
             horsesData,
             clientsData,
-            lineagesData,
+            stallsData,
             pendingData,
           ] =
             await Promise.all([
               getHorses(),
               getClients(),
-              getHorseLineages(),
+              getAvailableStalls(),
               getPendingHorseTrades(),
             ])
 
@@ -453,8 +468,8 @@ export function HorseCommercialPage() {
             ),
           )
 
-          setLineages(
-            lineagesData,
+          setAvailableStalls(
+            stallsData,
           )
 
           setPendingTrades(
@@ -484,17 +499,33 @@ export function HorseCommercialPage() {
     loadCommercialData,
   ])
 
-  const purchaseHorses =
+  const existingPurchaseHorse =
     useMemo(
-      () =>
-        horses.filter(
-          (horse) =>
-            horse.active &&
-            horse.ownershipType ===
-              'client',
-        ),
+      () => {
+        if (
+          initialMode !==
+            'purchase' ||
+          !horseFromUrl
+        ) {
+          return null
+        }
+
+        return (
+          horses.find(
+            (horse) =>
+              horse.id ===
+                horseFromUrl &&
+              horse.active &&
+              horse.ownershipType ===
+                'client',
+          ) ??
+          null
+        )
+      },
       [
+        horseFromUrl,
         horses,
+        initialMode,
       ],
     )
 
@@ -509,21 +540,6 @@ export function HorseCommercialPage() {
         ),
       [
         horses,
-      ],
-    )
-
-  const selectedPurchaseHorse =
-    useMemo(
-      () =>
-        purchaseHorses.find(
-          (horse) =>
-            horse.id ===
-            purchaseHorseId,
-        ) ??
-        null,
-      [
-        purchaseHorseId,
-        purchaseHorses,
       ],
     )
 
@@ -544,72 +560,61 @@ export function HorseCommercialPage() {
 
   useEffect(() => {
     if (
-      !selectedPurchaseHorse
+      !existingPurchaseHorse
     ) {
-      setPurchaseFatherName(
-        '',
-      )
-
-      setPurchaseMotherName(
-        '',
-      )
-
-      setSellerMode(
-        'external',
-      )
-
-      setSellerClientId(
-        '',
-      )
-
-      setExternalSellerName(
-        '',
-      )
-
       return
     }
 
+    setPurchaseName(
+      existingPurchaseHorse.name,
+    )
+
+    setPurchaseBreed(
+      existingPurchaseHorse.breed ??
+        '',
+    )
+
+    setPurchaseSex(
+      existingPurchaseHorse.sex,
+    )
+
+    setPurchaseBirthDate(
+      existingPurchaseHorse.birthDate ??
+        '',
+    )
+
+    setPurchaseStallId(
+      existingPurchaseHorse.stallId ??
+        '',
+    )
+
     setPurchaseFatherName(
-      selectedPurchaseHorse.lineageFatherName ??
+      existingPurchaseHorse.lineageFatherName ??
         '',
     )
 
     setPurchaseMotherName(
-      selectedPurchaseHorse.lineageMotherName ??
+      existingPurchaseHorse.lineageMotherName ??
         '',
     )
 
     if (
-      selectedPurchaseHorse.clientId
+      existingPurchaseHorse.clientId
     ) {
       setSellerMode(
         'client',
       )
 
       setSellerClientId(
-        selectedPurchaseHorse.clientId,
+        existingPurchaseHorse.clientId,
       )
 
       setExternalSellerName(
         '',
       )
-
-      return
     }
-
-    setSellerMode(
-      'external',
-    )
-
-    setSellerClientId(
-      '',
-    )
-
-    setExternalSellerName(
-      '',
-    )
   }, [
-    selectedPurchaseHorse,
+    existingPurchaseHorse,
   ])
 
   const selectedSeller =
@@ -639,27 +644,6 @@ export function HorseCommercialPage() {
       [
         buyerClientId,
         clients,
-      ],
-    )
-
-  const purchaseHorseOptions =
-    useMemo<
-      SearchableSelectOption[]
-    >(
-      () =>
-        purchaseHorses.map(
-          (horse) => ({
-            value:
-              horse.id,
-
-            label:
-              horse.breed
-                ? `${horse.name} · ${horse.breed}`
-                : horse.name,
-          }),
-        ),
-      [
-        purchaseHorses,
       ],
     )
 
@@ -700,54 +684,6 @@ export function HorseCommercialPage() {
         ),
       [
         clients,
-      ],
-    )
-
-  const fatherOptions =
-    useMemo<
-      SearchableSelectOption[]
-    >(
-      () =>
-        uniqueParentNames(
-          lineages.map(
-            (lineage) =>
-              lineage.fatherName,
-          ),
-        ).map(
-          (father) => ({
-            value:
-              father,
-
-            label:
-              father,
-          }),
-        ),
-      [
-        lineages,
-      ],
-    )
-
-  const motherOptions =
-    useMemo<
-      SearchableSelectOption[]
-    >(
-      () =>
-        uniqueParentNames(
-          lineages.map(
-            (lineage) =>
-              lineage.motherName,
-          ),
-        ).map(
-          (mother) => ({
-            value:
-              mother,
-
-            label:
-              mother,
-          }),
-        ),
-      [
-        lineages,
       ],
     )
 
@@ -867,10 +803,76 @@ export function HorseCommercialPage() {
     )
   }
 
+  function resetNewPurchaseFields() {
+    setPurchaseName(
+      '',
+    )
+
+    setPurchaseBreed(
+      '',
+    )
+
+    setPurchaseSex(
+      'male',
+    )
+
+    setPurchaseBirthDate(
+      '',
+    )
+
+    setPurchaseStallId(
+      '',
+    )
+
+    setSellerMode(
+      'external',
+    )
+
+    setSellerClientId(
+      '',
+    )
+
+    setExternalSellerName(
+      '',
+    )
+
+    setPurchaseFatherName(
+      '',
+    )
+
+    setPurchaseMotherName(
+      '',
+    )
+
+    setPurchaseAmount(
+      0,
+    )
+
+    setPurchaseDate(
+      today,
+    )
+
+    setPurchasePaid(
+      true,
+    )
+
+    setPurchaseNotes(
+      '',
+    )
+  }
+
   async function handlePurchaseSubmit(
     event: SubmitEvent<HTMLFormElement>,
   ) {
     event.preventDefault()
+
+    if (
+      purchaseSubmittingRef.current ||
+      saving ||
+      loading
+    ) {
+      return
+    }
 
     setError(
       null,
@@ -880,11 +882,44 @@ export function HorseCommercialPage() {
       null,
     )
 
+    const trimmedName =
+      purchaseName.trim()
+
+    const trimmedFatherName =
+      purchaseFatherName.trim()
+
+    const trimmedMotherName =
+      purchaseMotherName.trim()
+
     if (
-      !selectedPurchaseHorse
+      !existingPurchaseHorse &&
+      !trimmedName
     ) {
       setError(
-        'Selecione o cavalo que será comprado pelo Haras.',
+        'Informe o nome do cavalo.',
+      )
+
+      return
+    }
+
+    if (
+      !existingPurchaseHorse &&
+      !purchaseBreed
+    ) {
+      setError(
+        'Selecione a raça do cavalo.',
+      )
+
+      return
+    }
+
+    if (
+      purchaseBirthDate &&
+      purchaseBirthDate >
+        today
+    ) {
+      setError(
+        'A data de nascimento não pode estar no futuro.',
       )
 
       return
@@ -914,17 +949,11 @@ export function HorseCommercialPage() {
       return
     }
 
-    const trimmedFatherName =
-      purchaseFatherName.trim()
-
-    const trimmedMotherName =
-      purchaseMotherName.trim()
-
     if (
       !trimmedFatherName
     ) {
       setError(
-        'Selecione o pai do cavalo.',
+        'Informe o pai do cavalo.',
       )
 
       return
@@ -934,7 +963,7 @@ export function HorseCommercialPage() {
       !trimmedMotherName
     ) {
       setError(
-        'Selecione a mãe do cavalo.',
+        'Informe a mãe do cavalo.',
       )
 
       return
@@ -975,113 +1004,165 @@ export function HorseCommercialPage() {
       return
     }
 
+    purchaseSubmittingRef.current =
+      true
+
     setSaving(
       true,
     )
 
     try {
-      const lineage =
-        await createHorseLineage(
-          {
-            fatherName:
-              trimmedFatherName,
+      const existingLineageId =
+        existingPurchaseHorse &&
+        existingPurchaseHorse
+          .lineageFatherName ===
+          trimmedFatherName &&
+        existingPurchaseHorse
+          .lineageMotherName ===
+          trimmedMotherName
+          ? existingPurchaseHorse.lineageId
+          : null
 
-            motherName:
-              trimmedMotherName,
-          },
-        )
+      const lineageId =
+        existingLineageId ??
+        (
+          await createHorseLineage(
+            {
+              fatherName:
+                trimmedFatherName,
+
+              motherName:
+                trimmedMotherName,
+            },
+          )
+        ).id
 
       const tradeAt =
         dateInputToIso(
           purchaseDate,
         )
 
-      await registerHorsePurchaseWithLineage(
-        {
-          horseId:
-            selectedPurchaseHorse.id,
+      const counterpartyClientId =
+        sellerMode ===
+        'client'
+          ? selectedSeller?.id ??
+            null
+          : null
 
-          lineageId:
-            lineage.id,
+      const counterpartyName =
+        sellerMode ===
+        'client'
+          ? selectedSeller?.name ??
+            null
+          : externalSellerName.trim()
 
-          amount:
+      const horseName =
+        existingPurchaseHorse?.name ??
+        trimmedName
+
+      if (
+        existingPurchaseHorse
+      ) {
+        await registerHorsePurchaseWithLineage(
+          {
+            horseId:
+              existingPurchaseHorse.id,
+
+            lineageId,
+
+            amount:
+              purchaseAmount,
+
+            tradeAt,
+
+            counterpartyClientId,
+
+            counterpartyName,
+
+            paid:
+              purchasePaid,
+
+            paidAt:
+              purchasePaid
+                ? tradeAt
+                : null,
+
+            notes:
+              purchaseNotes.trim() ||
+              null,
+          },
+        )
+      } else {
+        await createHorseWithOptionalPurchase(
+          {
+            name:
+              trimmedName,
+
+            breed:
+              purchaseBreed,
+
+            sex:
+              purchaseSex,
+
+            birthDate:
+              purchaseBirthDate ||
+              null,
+
+            lineageId,
+
+            ownershipType:
+              'haras',
+
+            clientId:
+              null,
+
+            stallId:
+              purchaseStallId ||
+              null,
+
+            monthlyFee:
+              null,
+
+            registerPurchase:
+              true,
+
             purchaseAmount,
 
-          tradeAt,
+            purchaseAt:
+              tradeAt,
 
-          counterpartyClientId:
-            sellerMode ===
-            'client'
-              ? selectedSeller?.id ??
-                null
-              : null,
+            sellerClientId:
+              counterpartyClientId,
 
-          counterpartyName:
-            sellerMode ===
-            'client'
-              ? selectedSeller?.name ??
-                null
-              : externalSellerName.trim(),
+            sellerName:
+              counterpartyName,
 
-          paid:
-            purchasePaid,
+            purchasePaid:
+              purchasePaid,
 
-          paidAt:
-            purchasePaid
-              ? tradeAt
-              : null,
+            purchasePaidAt:
+              purchasePaid
+                ? tradeAt
+                : null,
 
-          notes:
-            purchaseNotes.trim() ||
-            null,
-        },
-      )
+            purchaseNotes:
+              purchaseNotes.trim() ||
+              null,
+          },
+        )
+      }
 
       setSuccessMessage(
         purchasePaid
-          ? `Compra de ${selectedPurchaseHorse.name} registrada e enviada ao Financeiro.`
-          : `Compra de ${selectedPurchaseHorse.name} registrada como pendente.`,
+          ? `Compra de ${horseName} registrada e enviada ao Financeiro.`
+          : `Compra de ${horseName} registrada como pendente.`,
       )
 
-      setPurchaseHorseId(
-        '',
-      )
-
-      setSellerMode(
-        'external',
-      )
-
-      setSellerClientId(
-        '',
-      )
-
-      setExternalSellerName(
-        '',
-      )
-
-      setPurchaseFatherName(
-        '',
-      )
-
-      setPurchaseMotherName(
-        '',
-      )
-
-      setPurchaseAmount(
-        0,
-      )
-
-      setPurchaseDate(
-        today,
-      )
-
-      setPurchasePaid(
-        true,
-      )
-
-      setPurchaseNotes(
-        '',
-      )
+      if (
+        !existingPurchaseHorse
+      ) {
+        resetNewPurchaseFields()
+      }
 
       await loadCommercialData()
     } catch (error) {
@@ -1094,6 +1175,9 @@ export function HorseCommercialPage() {
         message,
       )
     } finally {
+      purchaseSubmittingRef.current =
+        false
+
       setSaving(
         false,
       )
@@ -1425,8 +1509,8 @@ export function HorseCommercialPage() {
           </h1>
 
           <p className="page-header__description">
-            Registre compras e vendas. O sistema cuida da propriedade,
-            hospedagem e integração financeira.
+            Compras e vendas ficam isoladas do cadastro de cavalos de clientes.
+            O sistema registra a propriedade e a movimentação financeira ao confirmar.
           </p>
         </div>
       </header>
@@ -1526,179 +1610,330 @@ export function HorseCommercialPage() {
                   </h2>
 
                   <p>
-                    Selecione o animal e informe de quem o Haras está comprando.
+                    Informe o animal diretamente aqui. Não é necessário
+                    cadastrá-lo antes na área de cavalos.
                   </p>
                 </div>
               </div>
 
               <div className="horse-commercial-grid">
-                <div className="horse-commercial-field horse-commercial-field--full">
-                  <label htmlFor="purchaseHorse">
-                    Cavalo
-                  </label>
+                {existingPurchaseHorse ? (
+                  <div className="horse-commercial-context horse-commercial-field--full">
+                    <GitBranch
+                      size={18}
+                    />
 
-                  <SearchableSelect
-                    id="purchaseHorse"
-                    value={
-                      purchaseHorseId
-                    }
-                    options={
-                      purchaseHorseOptions
-                    }
-                    placeholder="Pesquise o cavalo..."
-                    emptyMessage="Nenhum cavalo encontrado."
-                    onChange={
-                      setPurchaseHorseId
-                    }
-                  />
-
-                  <div className="horse-commercial-new-horse">
                     <div>
+                      <span>
+                        Cavalo já cadastrado
+                      </span>
+
                       <strong>
-                        Não encontrou o cavalo?
+                        {existingPurchaseHorse.name}
+                        {existingPurchaseHorse.breed
+                          ? ` · ${existingPurchaseHorse.breed}`
+                          : ''}
                       </strong>
 
-                      <span>
-                        Cadastre agora e volte para a compra com o animal já
-                        selecionado.
-                      </span>
+                      <small>
+                        Proprietário atual: {existingPurchaseHorse.ownerName}.
+                        O vendedor foi preenchido automaticamente e pode ser alterado.
+                      </small>
                     </div>
-
-                    <Link
-                      to="/cavalos/novo?returnTo=comercial&mode=purchase"
-                    >
-                      <Plus
-                        size={15}
-                      />
-
-                      Novo cavalo
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="horse-commercial-field">
-                  <label htmlFor="sellerMode">
-                    Vendedor
-                  </label>
-
-                  <select
-                    id="sellerMode"
-                    value={
-                      sellerMode
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      handleSellerModeChange(
-                        event.target
-                          .value as SellerMode,
-                      )
-                    }
-                  >
-                    <option value="client">
-                      Cliente cadastrado
-                    </option>
-
-                    <option value="external">
-                      Vendedor externo
-                    </option>
-                  </select>
-                </div>
-
-                {sellerMode ===
-                  'client' ? (
-                  <div className="horse-commercial-field">
-                    <label>
-                      Pesquisar vendedor
-                    </label>
-
-                    <SearchableSelect
-                      id="sellerClient"
-                      value={
-                        sellerClientId
-                      }
-                      options={
-                        clientOptions
-                      }
-                      placeholder="Pesquise o cliente..."
-                      emptyMessage="Nenhum cliente encontrado."
-                      onChange={
-                        setSellerClientId
-                      }
-                    />
                   </div>
                 ) : (
+                  <>
+                    <div className="horse-commercial-field">
+                      <label htmlFor="purchaseName">
+                        Nome do cavalo
+                      </label>
+
+                      <input
+                        id="purchaseName"
+                        type="text"
+                        value={
+                          purchaseName
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          setPurchaseName(
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Ex: Apache"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    <div className="horse-commercial-field">
+                      <label htmlFor="purchaseBreed">
+                        Raça
+                      </label>
+
+                      <SearchableSelect
+                        id="purchaseBreed"
+                        value={
+                          purchaseBreed
+                        }
+                        options={
+                          breedOptions
+                        }
+                        placeholder="Pesquise uma raça..."
+                        emptyMessage="Nenhuma raça encontrada."
+                        onChange={
+                          setPurchaseBreed
+                        }
+                      />
+                    </div>
+
+                    <div className="horse-commercial-field">
+                      <label htmlFor="purchaseSex">
+                        Sexo
+                      </label>
+
+                      <select
+                        id="purchaseSex"
+                        value={
+                          purchaseSex
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          setPurchaseSex(
+                            event.target
+                              .value as HorseSex,
+                          )
+                        }
+                      >
+                        <option value="male">
+                          Macho
+                        </option>
+
+                        <option value="female">
+                          Fêmea
+                        </option>
+                      </select>
+                    </div>
+
+                    <div className="horse-commercial-field">
+                      <label htmlFor="purchaseBirthDate">
+                        Data de nascimento
+                      </label>
+
+                      <input
+                        id="purchaseBirthDate"
+                        type="date"
+                        max={
+                          today
+                        }
+                        value={
+                          purchaseBirthDate
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          setPurchaseBirthDate(
+                            event.target.value,
+                          )
+                        }
+                      />
+                    </div>
+
+                    <div className="horse-commercial-field">
+                      <label htmlFor="purchaseStall">
+                        Baia
+                      </label>
+
+                      <select
+                        id="purchaseStall"
+                        value={
+                          purchaseStallId
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          setPurchaseStallId(
+                            event.target.value,
+                          )
+                        }
+                      >
+                        <option value="">
+                          Sem baia
+                        </option>
+
+                        {availableStalls.map(
+                          (
+                            stall,
+                          ) => (
+                            <option
+                              value={
+                                stall.id
+                              }
+                              key={
+                                stall.id
+                              }
+                            >
+                              {
+                                stall.name
+                              }
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                <div
+                  className="horse-commercial-grid horse-commercial-field--full"
+                  style={{
+                    marginTop:
+                      0,
+                  }}
+                >
+                  {sellerMode ===
+                    'client' ? (
+                    <div className="horse-commercial-field">
+                      <label htmlFor="sellerClient">
+                        Cliente vendedor
+                      </label>
+
+                      <SearchableSelect
+                        id="sellerClient"
+                        value={
+                          sellerClientId
+                        }
+                        options={
+                          clientOptions
+                        }
+                        placeholder="Pesquise o cliente..."
+                        emptyMessage="Nenhum cliente encontrado."
+                        onChange={
+                          setSellerClientId
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <div className="horse-commercial-field">
+                      <label htmlFor="externalSeller">
+                        Nome do vendedor
+                      </label>
+
+                      <input
+                        id="externalSeller"
+                        type="text"
+                        value={
+                          externalSellerName
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          setExternalSellerName(
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Ex: João da Silva"
+                        autoComplete="off"
+                      />
+
+                      <small>
+                        O vendedor não precisa virar cliente do Haras.
+                      </small>
+                    </div>
+                  )}
+
                   <div className="horse-commercial-field">
-                    <label htmlFor="externalSeller">
-                      Nome do vendedor
+                    <label htmlFor="sellerMode">
+                      Vendedor
                     </label>
 
-                    <input
-                      id="externalSeller"
-                      type="text"
+                    <select
+                      id="sellerMode"
                       value={
-                        externalSellerName
+                        sellerMode
                       }
                       onChange={(
                         event,
                       ) =>
-                        setExternalSellerName(
+                        handleSellerModeChange(
+                          event.target
+                            .value as SellerMode,
+                        )
+                      }
+                    >
+                      <option value="client">
+                        Cliente cadastrado
+                      </option>
+
+                      <option value="external">
+                        Vendedor externo
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <div
+                  className="horse-commercial-grid horse-commercial-field--full"
+                  style={{
+                    marginTop:
+                      0,
+                  }}
+                >
+                  <div className="horse-commercial-field">
+                    <label htmlFor="purchaseFather">
+                      Pai
+                    </label>
+
+                    <input
+                      id="purchaseFather"
+                      type="text"
+                      value={
+                        purchaseFatherName
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setPurchaseFatherName(
                           event.target.value,
                         )
                       }
-                      placeholder="Ex: João da Silva"
+                      placeholder="Nome do pai"
                       autoComplete="off"
                     />
-
-                    <small>
-                      Não é necessário cadastrar o vendedor como cliente.
-                    </small>
                   </div>
-                )}
 
-                <div className="horse-commercial-field">
-                  <label>
-                    Pai
-                  </label>
+                  <div className="horse-commercial-field">
+                    <label htmlFor="purchaseMother">
+                      Mãe
+                    </label>
 
-                  <SearchableSelect
-                    id="purchaseFather"
-                    value={
-                      purchaseFatherName
-                    }
-                    options={
-                      fatherOptions
-                    }
-                    placeholder="Pesquise o pai..."
-                    emptyMessage="Nenhum pai cadastrado."
-                    onChange={
-                      setPurchaseFatherName
-                    }
-                  />
+                    <input
+                      id="purchaseMother"
+                      type="text"
+                      value={
+                        purchaseMotherName
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setPurchaseMotherName(
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Nome da mãe"
+                      autoComplete="off"
+                    />
+                  </div>
                 </div>
 
-                <div className="horse-commercial-field">
-                  <label>
-                    Mãe
-                  </label>
-
-                  <SearchableSelect
-                    id="purchaseMother"
-                    value={
-                      purchaseMotherName
-                    }
-                    options={
-                      motherOptions
-                    }
-                    placeholder="Pesquise a mãe..."
-                    emptyMessage="Nenhuma mãe cadastrada."
-                    onChange={
-                      setPurchaseMotherName
-                    }
-                  />
-                </div>
-
-                <div className="horse-commercial-field">
+                <div
+                  className="horse-commercial-field"
+                  style={{
+                    maxWidth:
+                      '260px',
+                  }}
+                >
                   <label htmlFor="purchaseAmount">
                     Valor da compra
                   </label>
@@ -1829,7 +2064,7 @@ export function HorseCommercialPage() {
                   </h2>
 
                   <p>
-                    Apenas animais pertencentes ao Haras aparecem para venda.
+                    Selecione um animal que já pertence ao Haras.
                   </p>
                 </div>
               </div>
@@ -1849,34 +2084,11 @@ export function HorseCommercialPage() {
                       saleHorseOptions
                     }
                     placeholder="Pesquise o cavalo..."
-                    emptyMessage="Nenhum cavalo encontrado."
+                    emptyMessage="Nenhum cavalo do Haras encontrado."
                     onChange={
                       setSaleHorseId
                     }
                   />
-
-                  <div className="horse-commercial-new-horse">
-                    <div>
-                      <strong>
-                        Não encontrou o cavalo?
-                      </strong>
-
-                      <span>
-                        Cadastre agora e volte para a venda com o animal já
-                        selecionado.
-                      </span>
-                    </div>
-
-                    <Link
-                      to="/cavalos/novo?returnTo=comercial&mode=sale"
-                    >
-                      <Plus
-                        size={15}
-                      />
-
-                      Novo cavalo
-                    </Link>
-                  </div>
                 </div>
 
                 {selectedSaleHorse && (
@@ -1931,7 +2143,7 @@ export function HorseCommercialPage() {
                 {buyerMode ===
                   'client' ? (
                   <div className="horse-commercial-field">
-                    <label>
+                    <label htmlFor="buyerClient">
                       Cliente
                     </label>
 
@@ -2085,7 +2297,9 @@ export function HorseCommercialPage() {
                         stays,
                       )
 
-                      if (!stays) {
+                      if (
+                        !stays
+                      ) {
                         setMonthlyFee(
                           0,
                         )
@@ -2188,7 +2402,9 @@ export function HorseCommercialPage() {
                   size={16}
                 />
 
-                {pendingTrades.length}
+                {
+                  pendingTrades.length
+                }
               </div>
             </div>
 
@@ -2212,7 +2428,9 @@ export function HorseCommercialPage() {
             ) : (
               <div className="horse-commercial-pending__list">
                 {pendingTrades.map(
-                  (trade) => {
+                  (
+                    trade,
+                  ) => {
                     const horseName =
                       getHorseName(
                         trade.horseId,
@@ -2243,7 +2461,9 @@ export function HorseCommercialPage() {
                           </span>
 
                           <strong>
-                            {horseName}
+                            {
+                              horseName
+                            }
                           </strong>
 
                           <small>

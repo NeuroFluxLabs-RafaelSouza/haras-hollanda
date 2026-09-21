@@ -5,7 +5,11 @@ import {
   useState,
 } from 'react'
 
-import { Check, ChevronDown, Search } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  Search,
+} from 'lucide-react'
 
 import './SearchableSelect.css'
 
@@ -21,13 +25,21 @@ type SearchableSelectProps = {
   placeholder?: string
   emptyMessage?: string
   disabled?: boolean
+  allowCustomValue?: boolean
   onChange: (value: string) => void
 }
 
-function normalizeText(value: string) {
+function normalizeText(
+  value: string,
+) {
   return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize(
+      'NFD',
+    )
+    .replace(
+      /[\u0300-\u036f]/g,
+      '',
+    )
     .toLowerCase()
     .trim()
 }
@@ -39,33 +51,62 @@ export function SearchableSelect({
   placeholder = 'Pesquisar...',
   emptyMessage = 'Nenhuma opção encontrada.',
   disabled = false,
+  allowCustomValue = false,
   onChange,
 }: SearchableSelectProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef =
+    useRef<HTMLDivElement>(
+      null,
+    )
 
-  const selectedOption = options.find(
-    (option) => option.value === value,
+  const selectedOption =
+    options.find(
+      (option) =>
+        option.value ===
+        value,
+    )
+
+  const displayValue =
+    selectedOption?.label ??
+    (
+      allowCustomValue
+        ? value
+        : ''
+    )
+
+  const [
+    query,
+    setQuery,
+  ] = useState(
+    displayValue,
   )
 
-  const [query, setQuery] = useState(
-    selectedOption?.label ?? '',
-  )
-
-  const [isOpen, setIsOpen] = useState(false)
-
-  useEffect(() => {
-    setQuery(selectedOption?.label ?? '')
-  }, [selectedOption?.label])
+  const [
+    isOpen,
+    setIsOpen,
+  ] = useState(false)
 
   useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
+    setQuery(
+      displayValue,
+    )
+  }, [
+    displayValue,
+  ])
+
+  useEffect(() => {
+    function handlePointerDown(
+      event: MouseEvent,
+    ) {
       if (
         containerRef.current &&
         !containerRef.current.contains(
           event.target as Node,
         )
       ) {
-        setIsOpen(false)
+        setIsOpen(
+          false,
+        )
       }
     }
 
@@ -82,54 +123,109 @@ export function SearchableSelect({
     }
   }, [])
 
-  const filteredOptions = useMemo(() => {
-    const normalizedQuery = normalizeText(query)
+  const filteredOptions =
+    useMemo(
+      () => {
+        const normalizedQuery =
+          normalizeText(
+            query,
+          )
 
-    if (!normalizedQuery) {
-      return options
-    }
+        if (
+          !normalizedQuery
+        ) {
+          return options
+        }
 
-    return options.filter((option) =>
-      normalizeText(option.label).includes(
-        normalizedQuery,
-      ),
+        return options.filter(
+          (option) =>
+            normalizeText(
+              option.label,
+            ).includes(
+              normalizedQuery,
+            ),
+        )
+      },
+      [
+        options,
+        query,
+      ],
     )
-  }, [options, query])
 
   function handleInputChange(
     newQuery: string,
   ) {
-    setQuery(newQuery)
-    setIsOpen(true)
+    setQuery(
+      newQuery,
+    )
+
+    setIsOpen(
+      true,
+    )
+
+    if (
+      allowCustomValue
+    ) {
+      onChange(
+        newQuery,
+      )
+
+      return
+    }
 
     if (
       selectedOption &&
-      newQuery !== selectedOption.label
+      newQuery !==
+        selectedOption.label
     ) {
-      onChange('')
+      onChange(
+        '',
+      )
     }
   }
 
   function handleSelect(
     option: SearchableSelectOption,
   ) {
-    onChange(option.value)
-    setQuery(option.label)
-    setIsOpen(false)
+    onChange(
+      option.value,
+    )
+
+    setQuery(
+      option.label,
+    )
+
+    setIsOpen(
+      false,
+    )
   }
 
   function handleFocus() {
-    if (disabled) {
+    if (
+      disabled
+    ) {
       return
     }
 
-    setIsOpen(true)
+    setIsOpen(
+      true,
+    )
   }
+
+  const showEmptyMessage =
+    filteredOptions.length ===
+      0 &&
+    !(
+      allowCustomValue &&
+      query.trim()
+    )
 
   return (
     <div
       className="searchable-select"
-      ref={containerRef}
+      ref={
+        containerRef
+      }
     >
       <div
         className={`searchable-select__control ${
@@ -141,18 +237,30 @@ export function SearchableSelect({
         <Search
           className="searchable-select__search-icon"
           size={16}
-          strokeWidth={1.8}
+          strokeWidth={
+            1.8
+          }
         />
 
         <input
           id={id}
           type="text"
-          value={query}
-          placeholder={placeholder}
-          disabled={disabled}
+          value={
+            query
+          }
+          placeholder={
+            placeholder
+          }
+          disabled={
+            disabled
+          }
           autoComplete="off"
-          onFocus={handleFocus}
-          onChange={(event) =>
+          onFocus={
+            handleFocus
+          }
+          onChange={(
+            event,
+          ) =>
             handleInputChange(
               event.target.value,
             )
@@ -162,67 +270,105 @@ export function SearchableSelect({
         <button
           className="searchable-select__toggle"
           type="button"
-          disabled={disabled}
+          disabled={
+            disabled
+          }
           aria-label="Abrir opções"
           onClick={() =>
-            setIsOpen((current) => !current)
+            setIsOpen(
+              (current) =>
+                !current,
+            )
           }
         >
           <ChevronDown
             size={16}
-            strokeWidth={1.8}
+            strokeWidth={
+              1.8
+            }
           />
         </button>
       </div>
 
-      {isOpen && !disabled && (
-        <div
-          className="searchable-select__dropdown"
-          role="listbox"
-        >
-          {filteredOptions.length === 0 ? (
-            <div className="searchable-select__empty">
-              {emptyMessage}
-            </div>
-          ) : (
-            filteredOptions.map((option) => {
-              const selected =
-                option.value === value
-
-              return (
-                <button
-                  className={`searchable-select__option ${
-                    selected
-                      ? 'searchable-select__option--selected'
-                      : ''
-                  }`}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  key={option.value}
-                  onMouseDown={(event) =>
-                    event.preventDefault()
-                  }
-                  onClick={() =>
-                    handleSelect(option)
-                  }
-                >
-                  <span>
-                    {option.label}
-                  </span>
-
-                  {selected && (
-                    <Check
-                      size={15}
-                      strokeWidth={2}
-                    />
+      {isOpen &&
+        !disabled && (
+          <div
+            className="searchable-select__dropdown"
+            role="listbox"
+          >
+            {showEmptyMessage ? (
+              <div className="searchable-select__empty">
+                {
+                  emptyMessage
+                }
+              </div>
+            ) : (
+              <>
+                {allowCustomValue &&
+                  query.trim() &&
+                  filteredOptions.length ===
+                    0 && (
+                    <div className="searchable-select__empty">
+                      Pressione fora do campo para manter “{query.trim()}”.
+                    </div>
                   )}
-                </button>
-              )
-            })
-          )}
-        </div>
-      )}
+
+                {filteredOptions.map(
+                  (
+                    option,
+                  ) => {
+                    const selected =
+                      option.value ===
+                      value
+
+                    return (
+                      <button
+                        className={`searchable-select__option ${
+                          selected
+                            ? 'searchable-select__option--selected'
+                            : ''
+                        }`}
+                        type="button"
+                        role="option"
+                        aria-selected={
+                          selected
+                        }
+                        key={
+                          option.value
+                        }
+                        onMouseDown={(
+                          event,
+                        ) =>
+                          event.preventDefault()
+                        }
+                        onClick={() =>
+                          handleSelect(
+                            option,
+                          )
+                        }
+                      >
+                        <span>
+                          {
+                            option.label
+                          }
+                        </span>
+
+                        {selected && (
+                          <Check
+                            size={15}
+                            strokeWidth={
+                              2
+                            }
+                          />
+                        )}
+                      </button>
+                    )
+                  },
+                )}
+              </>
+            )}
+          </div>
+        )}
     </div>
   )
 }
