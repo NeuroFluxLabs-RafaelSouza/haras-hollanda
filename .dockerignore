@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.gitignore
+
+.vscode
+.idea
+
+*.log
+npm-debug.log*
+
+.env
+.env.*
+!.env.example
+
+AGENTS.md
+horses-flow.diff

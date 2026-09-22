@@ -1739,199 +1739,140 @@ export function HorseCommercialPage() {
                         }
                       />
                     </div>
-
-                    <div className="horse-commercial-field">
-                      <label htmlFor="purchaseStall">
-                        Baia
-                      </label>
-
-                      <select
-                        id="purchaseStall"
-                        value={
-                          purchaseStallId
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setPurchaseStallId(
-                            event.target.value,
-                          )
-                        }
-                      >
-                        <option value="">
-                          Sem baia
-                        </option>
-
-                        {availableStalls.map(
-                          (
-                            stall,
-                          ) => (
-                            <option
-                              value={
-                                stall.id
-                              }
-                              key={
-                                stall.id
-                              }
-                            >
-                              {
-                                stall.name
-                              }
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </div>
                   </>
                 )}
 
-                <div
-                  className="horse-commercial-grid horse-commercial-field--full"
-                  style={{
-                    marginTop:
-                      0,
-                  }}
-                >
-                  {sellerMode ===
-                    'client' ? (
-                    <div className="horse-commercial-field">
-                      <label htmlFor="sellerClient">
-                        Cliente vendedor
-                      </label>
-
-                      <SearchableSelect
-                        id="sellerClient"
-                        value={
-                          sellerClientId
-                        }
-                        options={
-                          clientOptions
-                        }
-                        placeholder="Pesquise o cliente..."
-                        emptyMessage="Nenhum cliente encontrado."
-                        onChange={
-                          setSellerClientId
-                        }
-                      />
-                    </div>
-                  ) : (
-                    <div className="horse-commercial-field">
-                      <label htmlFor="externalSeller">
-                        Nome do vendedor
-                      </label>
-
-                      <input
-                        id="externalSeller"
-                        type="text"
-                        value={
-                          externalSellerName
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          setExternalSellerName(
-                            event.target.value,
-                          )
-                        }
-                        placeholder="Ex: João da Silva"
-                        autoComplete="off"
-                      />
-
-                      <small>
-                        O vendedor não precisa virar cliente do Haras.
-                      </small>
-                    </div>
-                  )}
-
+                {sellerMode ===
+                  'client' ? (
                   <div className="horse-commercial-field">
-                    <label htmlFor="sellerMode">
-                      Vendedor
+                    <label htmlFor="sellerClient">
+                      Cliente vendedor
                     </label>
 
-                    <select
-                      id="sellerMode"
+                    <SearchableSelect
+                      id="sellerClient"
                       value={
-                        sellerMode
+                        sellerClientId
+                      }
+                      options={
+                        clientOptions
+                      }
+                      placeholder="Pesquise o cliente..."
+                      emptyMessage="Nenhum cliente encontrado."
+                      onChange={
+                        setSellerClientId
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="horse-commercial-field">
+                    <label htmlFor="externalSeller">
+                      Nome do vendedor
+                    </label>
+
+                    <input
+                      id="externalSeller"
+                      type="text"
+                      value={
+                        externalSellerName
                       }
                       onChange={(
                         event,
                       ) =>
-                        handleSellerModeChange(
-                          event.target
-                            .value as SellerMode,
+                        setExternalSellerName(
+                          event.target.value,
                         )
                       }
-                    >
-                      <option value="client">
-                        Cliente cadastrado
-                      </option>
+                      placeholder="Ex: João da Silva"
+                      autoComplete="off"
+                    />
 
-                      <option value="external">
-                        Vendedor externo
-                      </option>
-                    </select>
+                    <small>
+                      O vendedor não precisa virar cliente do Haras.
+                    </small>
                   </div>
+                )}
+
+                <div className="horse-commercial-field">
+                  <label htmlFor="sellerMode">
+                    Vendedor
+                  </label>
+
+                  <select
+                    id="sellerMode"
+                    value={
+                      sellerMode
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      handleSellerModeChange(
+                        event.target
+                          .value as SellerMode,
+                      )
+                    }
+                  >
+                    <option value="client">
+                      Cliente cadastrado
+                    </option>
+
+                    <option value="external">
+                      Vendedor externo
+                    </option>
+                  </select>
                 </div>
 
-                <div
-                  className="horse-commercial-grid horse-commercial-field--full"
-                  style={{
-                    marginTop:
-                      0,
-                  }}
-                >
-                  <div className="horse-commercial-field">
-                    <label htmlFor="purchaseFather">
-                      Pai
-                    </label>
+                <div className="horse-commercial-field">
+                  <label htmlFor="purchaseFather">
+                    Pai
+                  </label>
 
-                    <input
-                      id="purchaseFather"
-                      type="text"
-                      value={
-                        purchaseFatherName
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        setPurchaseFatherName(
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Nome do pai"
-                      autoComplete="off"
-                    />
-                  </div>
+                  <input
+                    id="purchaseFather"
+                    type="text"
+                    value={
+                      purchaseFatherName
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setPurchaseFatherName(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Nome do pai"
+                    autoComplete="off"
+                  />
+                </div>
 
-                  <div className="horse-commercial-field">
-                    <label htmlFor="purchaseMother">
-                      Mãe
-                    </label>
+                <div className="horse-commercial-field">
+                  <label htmlFor="purchaseMother">
+                    Mãe
+                  </label>
 
-                    <input
-                      id="purchaseMother"
-                      type="text"
-                      value={
-                        purchaseMotherName
-                      }
-                      onChange={(
-                        event,
-                      ) =>
-                        setPurchaseMotherName(
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Nome da mãe"
-                      autoComplete="off"
-                    />
-                  </div>
+                  <input
+                    id="purchaseMother"
+                    type="text"
+                    value={
+                      purchaseMotherName
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setPurchaseMotherName(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Nome da mãe"
+                    autoComplete="off"
+                  />
                 </div>
 
                 <div
                   className="horse-commercial-field"
                   style={{
                     maxWidth:
-                      '260px',
+                      '280px',
                   }}
                 >
                   <label htmlFor="purchaseAmount">
@@ -2001,6 +1942,49 @@ export function HorseCommercialPage() {
                     <option value="pending">
                       Pagamento pendente
                     </option>
+                  </select>
+                </div>
+
+                <div className="horse-commercial-field">
+                  <label htmlFor="purchaseStall">
+                    Baia
+                  </label>
+
+                  <select
+                    id="purchaseStall"
+                    value={
+                      purchaseStallId
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setPurchaseStallId(
+                        event.target.value,
+                      )
+                    }
+                  >
+                    <option value="">
+                      Sem baia
+                    </option>
+
+                    {availableStalls.map(
+                      (
+                        stall,
+                      ) => (
+                        <option
+                          value={
+                            stall.id
+                          }
+                          key={
+                            stall.id
+                          }
+                        >
+                          {
+                            stall.name
+                          }
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
 
