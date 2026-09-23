@@ -1,12 +1,12 @@
 Haras Hollanda
 
-Sistema web de gestão para haras, desenvolvido para centralizar a operação diária em uma única aplicação: cadastro de cavalos e clientes, controle de baias, alimentação, agenda, estoque e acompanhamento financeiro.
+Sistema web de gestão para haras, desenvolvido para centralizar a operação diária em uma única aplicação: cavalos, clientes, baias, alimentação, agenda, estoque, operações comerciais e financeiro.
 
-O projeto foi construído como uma aplicação real de gestão, com foco em reduzir retrabalho administrativo, evitar cadastros duplicados e tornar as rotinas do haras mais simples para quem opera o sistema no dia a dia.
+O projeto foi criado como uma solução real para a rotina administrativa do Haras Hollanda, com foco em reduzir retrabalho, evitar cadastros duplicados e reunir informações operacionais em um único sistema.
 
 Visão geral
 
-O Haras Hollanda organiza informações que normalmente ficam espalhadas entre planilhas, anotações e controles separados.
+O Haras Hollanda organiza informações que normalmente ficam espalhadas entre planilhas, anotações, mensagens e controles separados.
 
 A aplicação reúne em um único fluxo:
 
@@ -29,6 +29,30 @@ operações comerciais relacionadas aos animais;
 configurações administrativas do haras.
 
 A interface foi desenvolvida para desktop, tablet e celular, mantendo a navegação e os principais cards acessíveis também em telas menores.
+
+Modelo de acesso
+
+O Haras Hollanda foi desenvolvido para uso interno de um único administrador responsável pela operação do haras.
+
+Não existe cadastro público de usuários.
+
+O acesso ao sistema é controlado por autenticação administrativa via Supabase Auth, e novas contas não podem ser criadas livremente pela interface pública.
+
+Isso significa que:
+
+não há fluxo de "Criar conta";
+
+não há onboarding público;
+
+não há múltiplos perfis de usuário no modelo atual;
+
+o acesso é restrito à administração do Haras Hollanda;
+
+recuperação de senha é permitida para a conta administrativa cadastrada;
+
+credenciais de acesso não são disponibilizadas no repositório.
+
+Esse modelo foi escolhido porque o sistema não é um SaaS multiempresa. Ele foi construído para uma operação específica, com acesso interno e controlado.
 
 Funcionalidades
 
@@ -104,6 +128,16 @@ Histórico de transações.
 
 Acompanhamento de valores recebidos, pendentes e a pagar.
 
+Comercial
+
+Registro de compras e vendas de cavalos.
+
+Reaproveitamento de animais já cadastrados no sistema.
+
+Evita duplicidade de dados ao transformar uma operação comercial em mudança de propriedade.
+
+Suporte a vendedores cadastrados e externos.
+
 Stack
 
 Front-end
@@ -146,32 +180,33 @@ Arquitetura
 
 A aplicação utiliza uma arquitetura de front-end React conectada ao Supabase para autenticação e persistência de dados.
 
-Usuário
-   |
-   v
+Administrador
+    |
+    v
+Supabase Authentication
+    |
+    v
 React + TypeScript
-   |
-   v
+    |
+    v
 Supabase Client
-   |
-   +--> Authentication
-   |
-   +--> PostgreSQL
+    |
+    +--> PostgreSQL
 
 Na homologação, o front-end é compilado pelo Vite e distribuído de forma estática utilizando Amazon S3 e CloudFront.
 
 Código fonte
-   |
-   v
+    |
+    v
 Vite build
-   |
-   v
+    |
+    v
 dist/
-   |
-   v
+    |
+    v
 Amazon S3
-   |
-   v
+    |
+    v
 Amazon CloudFront
 
 O projeto também possui uma imagem Docker multi-stage com Node.js para build e Nginx para servir os arquivos estáticos.
@@ -202,6 +237,26 @@ inventory_items
 inventory_movements
 professionals
 stalls
+
+Autenticação
+
+O sistema utiliza Supabase Auth para proteger as rotas administrativas.
+
+O fluxo atual inclui:
+
+login com e-mail e senha;
+
+proteção de rotas privadas;
+
+recuperação de senha por e-mail;
+
+redefinição de senha;
+
+encerramento de sessão;
+
+ausência intencional de cadastro público.
+
+A aplicação foi projetada para um único administrador, portanto não existe fluxo de criação pública de conta.
 
 Executando localmente
 
@@ -272,7 +327,9 @@ A versão de homologação está publicada utilizando AWS S3 + CloudFront:
 
 https://dclbd1hp5zqg4.cloudfront.net
 
-A aplicação é protegida por autenticação. Não existem credenciais públicas de acesso no repositório.
+A aplicação é protegida por autenticação administrativa.
+
+Não existe cadastro público de usuários e nenhuma credencial de acesso é disponibilizada no repositório.
 
 Qualidade e validação
 
@@ -287,7 +344,21 @@ O comando de build executa:
 
 TypeScript compiler -> Vite build
 
-Testes automatizados ainda não foram adicionados ao projeto. A inclusão de testes unitários e de integração faz parte das próximas evoluções técnicas.
+Testes automatizados estão sendo adicionados ao projeto.
+
+A estratégia planejada é utilizar:
+
+Vitest para execução dos testes;
+
+React Testing Library para componentes e fluxos de interface;
+
+jsdom para ambiente de navegador simulado;
+
+cobertura de código com V8;
+
+Playwright em uma etapa posterior para testes end-to-end.
+
+Os primeiros testes serão focados em autenticação, proteção de rotas e fluxos críticos do sistema.
 
 Estrutura do projeto
 
@@ -327,7 +398,9 @@ reduzir a quantidade de cliques necessários para tarefas recorrentes;
 
 manter as regras de negócio fora dos componentes visuais sempre que possível;
 
-oferecer experiência consistente entre desktop, tablet e celular.
+oferecer experiência consistente entre desktop, tablet e celular;
+
+manter o acesso restrito à administração, sem cadastro público.
 
 Status
 
