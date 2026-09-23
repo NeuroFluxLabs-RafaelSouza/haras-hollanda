@@ -1,144 +1,486 @@
 .app {
-  min-height:
-    100vh;
+  min-height: 100vh;
 }
 
 .app__content {
-  min-height:
-    100vh;
-
-  margin-left:
-    var(--sidebar-width);
-
+  min-height: 100vh;
+  margin-left: var(--sidebar-width);
   padding:
     44px
     clamp(28px, 4vw, 64px)
     64px;
-
-  background:
-    transparent;
+  background: transparent;
 }
 
 .page-header {
-  width:
-    100%;
-
-  max-width:
-    var(--content-max-width);
-
-  margin-bottom:
-    28px;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin-bottom: 28px;
 }
 
 .page-header__eyebrow {
-  margin:
-    0 0 8px;
-
-  color:
-    var(--color-moss);
-
-  font-size:
-    11px;
-
-  font-weight:
-    700;
-
-  letter-spacing:
-    0.055em;
-
-  text-transform:
-    uppercase;
+  margin: 0 0 8px;
+  color: var(--color-moss);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
 }
 
 .page-header__title {
-  margin:
-    0;
-
-  color:
-    var(--color-text);
-
-  font-size:
-    clamp(34px, 4vw, 46px);
-
-  font-weight:
-    720;
-
-  line-height:
-    1.04;
-
-  letter-spacing:
-    -0.045em;
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(34px, 4vw, 46px);
+  font-weight: 720;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
 }
 
 .page-header__description {
-  max-width:
-    680px;
-
-  margin:
-    10px 0 0;
-
-  color:
-    var(--color-text-muted);
-
-  font-size:
-    14px;
-
-  line-height:
-    1.55;
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .app__content--login {
-  margin-left:
-    0;
+  margin-left: 0;
 }
 
-@media (
-  max-width:
-    1100px
-) {
+/*
+ * Tablet/mobile:
+ * mantém a linguagem visual dos cards do desktop.
+ * Em tablets os grids continuam em múltiplas colunas.
+ * Em celulares, grids ricos viram faixas horizontais com swipe,
+ * evitando reduzir texto e conteúdo até ficarem ilegíveis.
+ */
+@media (max-width: 1180px) {
   .app__content {
-    margin-left:
-      0;
-
+    margin-left: 0;
     padding:
-      90px 28px 48px;
+      32px
+      28px
+      calc(128px + env(safe-area-inset-bottom));
+  }
+
+  /* Dashboard: Alimentação, Agenda e Estoque permanecem lado a lado. */
+  .dashboard-operation-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-operation-card {
+    min-height: 190px;
+  }
+
+  /* Cavalos: mantém duas colunas, como no desktop. */
+  .horses-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .horse-card__profile {
+    grid-template-columns:
+      132px minmax(0, 1fr);
+  }
+
+  .horse-card__photo-column,
+  .horse-card__photo {
+    width: 132px;
+  }
+
+  .horse-card__details {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .horse-card__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .horse-card__action {
+    width: auto;
+  }
+
+  /* Financeiro: quatro cards-resumo na mesma linha. */
+  .finance-summary {
+    grid-template-columns:
+      1.2fr
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .finance-attention-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  /* Clientes, baias e estoque mantêm o grid de duas colunas. */
+  .clients-grid,
+  .stalls-grid,
+  .inventory-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  /* Estoque mantém os dados e ações internos em duas colunas. */
+  .inventory-card__stock,
+  .inventory-card__actions {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  /* Agenda preserva a composição de desktop dentro de cada compromisso. */
+  .agenda-item {
+    grid-template-columns:
+      72px minmax(0, 1fr) auto;
+  }
+
+  .agenda-item__information {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .agenda-item__info--description {
+    grid-column: 1 / -1;
+  }
+
+  .agenda-item__actions {
+    align-items: stretch;
+  }
+
+  .agenda-item__completion-panel {
+    grid-column: 1 / -1;
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .agenda-item__completion-actions {
+    flex-direction: row;
+  }
+
+  .agenda-item__completion-actions button {
+    width: auto;
   }
 }
 
-@media (
-  max-width:
-    760px
-) {
+@media (max-width: 760px) {
   .app__content {
     padding:
-      86px 16px 40px;
+      24px
+      16px
+      calc(116px + env(safe-area-inset-bottom));
   }
 
   .page-header {
-    margin-bottom:
-      22px;
+    margin-bottom: 22px;
   }
 
   .page-header__title {
-    font-size:
-      clamp(30px, 9vw, 36px);
+    font-size: clamp(30px, 9vw, 36px);
   }
 
   .page-header__description {
-    font-size:
-      13px;
+    font-size: 13px;
+  }
+
+  /*
+   * Faixas horizontais:
+   * os cards continuam com proporção de desktop,
+   * mas o usuário navega lateralmente com o dedo.
+   */
+  .dashboard-operation-grid,
+  .finance-summary,
+  .finance-attention-grid,
+  .horses-grid,
+  .clients-grid,
+  .stalls-grid,
+  .inventory-grid,
+  .inventory-metrics {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .dashboard-operation-grid::-webkit-scrollbar,
+  .finance-summary::-webkit-scrollbar,
+  .finance-attention-grid::-webkit-scrollbar,
+  .horses-grid::-webkit-scrollbar,
+  .clients-grid::-webkit-scrollbar,
+  .stalls-grid::-webkit-scrollbar,
+  .inventory-grid::-webkit-scrollbar,
+  .inventory-metrics::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-operation-card,
+  .finance-summary-card,
+  .finance-attention-card,
+  .horse-card,
+  .client-card,
+  .stall-card,
+  .inventory-card,
+  .inventory-metric {
+    scroll-snap-align: start;
+  }
+
+  /*
+   * Dashboard:
+   * dois cards ficam praticamente visíveis ao mesmo tempo
+   * e o terceiro continua ao lado, como no desktop.
+   */
+  .dashboard-operation-grid {
+    grid-template-columns:
+      repeat(3, minmax(168px, 46vw));
+    justify-content: start;
+  }
+
+  .dashboard-operation-card {
+    min-height: 174px;
+    padding: 15px;
+  }
+
+  .dashboard-operation-card__value {
+    font-size: 27px;
+  }
+
+  /*
+   * Financeiro:
+   * mantém os quatro cards em uma única linha horizontal.
+   */
+  .finance-summary {
+    grid-template-columns:
+      repeat(4, minmax(180px, 46vw));
+    justify-content: start;
+  }
+
+  .finance-summary-card {
+    min-height: 148px;
+  }
+
+  .finance-attention-grid {
+    grid-template-columns:
+      repeat(2, minmax(250px, 72vw));
+    justify-content: start;
+  }
+
+  /*
+   * Cavalos:
+   * cards continuam lado a lado e preservam foto + dados em colunas.
+   */
+  .horses-grid {
+    grid-template-columns:
+      repeat(2, minmax(340px, 90vw));
+    justify-content: start;
+  }
+
+  .horse-card {
+    padding: 16px;
+  }
+
+  .horse-card__profile {
+    grid-template-columns:
+      108px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .horse-card__photo-column,
+  .horse-card__photo {
+    width: 108px;
+  }
+
+  .horse-card__details {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .horse-card__detail {
+    gap: 6px;
+  }
+
+  .horse-card__detail-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .horse-card__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 7px;
+  }
+
+  .horse-card__action {
+    width: auto;
+    min-width: 0;
+    padding-inline: 10px;
+    font-size: 9.5px;
+  }
+
+  /*
+   * Clientes, baias e estoque:
+   * dois cards continuam na mesma faixa horizontal.
+   */
+  .clients-grid,
+  .stalls-grid,
+  .inventory-grid {
+    grid-template-columns:
+      repeat(2, minmax(285px, 82vw));
+    justify-content: start;
+  }
+
+  .client-card,
+  .stall-card,
+  .inventory-card {
+    min-width: 0;
+  }
+
+  .inventory-metrics {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(180px, 48vw);
+    justify-content: start;
+    flex-wrap: nowrap;
+  }
+
+  .inventory-metric {
+    min-width: 0;
+  }
+
+  .inventory-card__stock,
+  .inventory-card__actions {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  /*
+   * Agenda:
+   * mantém hora, conteúdo e ações na mesma composição do desktop.
+   * O conteúdo interno fica compacto, sem transformar tudo em uma coluna.
+   */
+  .agenda-toolbar {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .agenda-toolbar__actions {
+    width: auto;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .agenda-add-button,
+  .agenda-professionals-button {
+    width: auto;
+  }
+
+  .agenda-item {
+    padding: 14px;
+    grid-template-columns:
+      58px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .agenda-item__information {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .agenda-item__actions {
+    min-width: 104px;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .agenda-item__completion-panel {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .agenda-item__completion-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .agenda-item__completion-actions button {
+    width: auto;
+  }
+
+  /*
+   * Barras de ação continuam compactas em vez de virar botões gigantes.
+   */
+  .horses-toolbar,
+  .clients-toolbar,
+  .stalls-toolbar,
+  .inventory-page-header {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .horses-toolbar__actions,
+  .inventory-page-header__actions {
+    width: auto;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .horses-search {
+    width: min(100%, 230px);
+  }
+
+  .horses-add-button,
+  .horses-feeding-today-button,
+  .horses-commercial-button,
+  .clients-add-button,
+  .stalls-add-button,
+  .inventory-page-header__primary,
+  .inventory-page-header__secondary {
+    width: auto;
   }
 }
 
-@media (
-  max-width:
-    420px
-) {
+@media (max-width: 420px) {
   .app__content {
-    padding-right:
-      14px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
 
-    padding-left:
-      14px;
+  .dashboard-operation-grid {
+    grid-template-columns:
+      repeat(3, minmax(160px, 45vw));
+  }
+
+  .finance-summary {
+    grid-template-columns:
+      repeat(4, minmax(174px, 47vw));
+  }
+
+  .horses-grid {
+    grid-template-columns:
+      repeat(2, minmax(326px, 89vw));
+  }
+
+  .clients-grid,
+  .stalls-grid,
+  .inventory-grid {
+    grid-template-columns:
+      repeat(2, minmax(278px, 80vw));
+  }
+
+  .agenda-item {
+    grid-template-columns:
+      52px minmax(0, 1fr) 92px;
+  }
+
+  .agenda-item__actions {
+    min-width: 92px;
   }
 }
