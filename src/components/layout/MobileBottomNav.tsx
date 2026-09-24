@@ -115,11 +115,14 @@ export function MobileBottomNav({
       return
     }
 
-    const previousOverflow = document.body.style.overflow
+    const previousOverflow =
+      document.body.style.overflow
 
     document.body.style.overflow = 'hidden'
 
-    function handleKeyDown(event: KeyboardEvent) {
+    function handleKeyDown(
+      event: KeyboardEvent,
+    ) {
       if (event.key === 'Escape') {
         setIsMenuOpen(false)
       }
@@ -131,7 +134,8 @@ export function MobileBottomNav({
     )
 
     return () => {
-      document.body.style.overflow = previousOverflow
+      document.body.style.overflow =
+        previousOverflow
 
       window.removeEventListener(
         'keydown',
@@ -154,17 +158,17 @@ export function MobileBottomNav({
         onClick={() => setIsMenuOpen(false)}
       />
 
-      <section
+      <aside
         id="mobile-app-menu"
-        className={`mobile-nav__sheet ${
+        className={`mobile-quick-menu ${
           isMenuOpen
-            ? 'mobile-nav__sheet--open'
+            ? 'mobile-quick-menu--open'
             : ''
         }`}
         aria-hidden={!isMenuOpen}
         aria-label="Menu do Haras Hollanda"
       >
-        <div className="mobile-nav__sheet-header">
+        <header className="mobile-quick-menu__header">
           <div>
             <strong>Menu</strong>
             <span>Haras Hollanda</span>
@@ -172,18 +176,18 @@ export function MobileBottomNav({
 
           <button
             type="button"
-            className="mobile-nav__close"
+            className="mobile-quick-menu__close"
             aria-label="Fechar menu"
             onClick={() => setIsMenuOpen(false)}
           >
             <X
-              size={20}
+              size={18}
               strokeWidth={1.8}
             />
           </button>
-        </div>
+        </header>
 
-        <nav className="mobile-nav__sheet-grid">
+        <nav className="mobile-quick-menu__nav">
           {secondaryItems.map(({
             label,
             icon: Icon,
@@ -193,31 +197,33 @@ export function MobileBottomNav({
               key={label}
               to={path}
               className={({ isActive }) =>
-                `mobile-nav__sheet-item ${
+                `mobile-quick-menu__item ${
                   isActive
-                    ? 'mobile-nav__sheet-item--active'
+                    ? 'mobile-quick-menu__item--active'
                     : ''
                 }`
               }
             >
-              <span className="mobile-nav__sheet-icon">
+              <span className="mobile-quick-menu__icon">
                 <Icon
-                  size={21}
+                  size={19}
                   strokeWidth={1.8}
                 />
               </span>
 
-              <span>{label}</span>
+              <span className="mobile-quick-menu__label">
+                {label}
+              </span>
             </NavLink>
           ))}
         </nav>
 
         {footerAction ? (
-          <div className="mobile-nav__sheet-footer">
+          <div className="mobile-quick-menu__footer">
             {footerAction}
           </div>
         ) : null}
-      </section>
+      </aside>
 
       <nav
         className="mobile-nav"
